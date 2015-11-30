@@ -37,10 +37,10 @@
 #ifdef RGA_ENABLE
 #include "rga.h"
 #endif
-#include "rk3066.h"
 #include <linux/fb.h>
 #include <ump/ump.h>
 #include <ump/ump_ref_drv.h>
+#include "rk3066.h"
 
 #define PAGE_MASK    (getpagesize() - 1)
 #define MFREE(p)	{free(p);p=NULL;}

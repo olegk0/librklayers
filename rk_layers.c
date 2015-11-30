@@ -176,7 +176,49 @@ int OvlSetHDMI(int xres,int yres)
 
     return ret;
 }
+//-----------------------------------------------------------------
+int ovlToHWRkFormat(OvlLayoutFormatType format)
+{
+	int ret;
 
+    switch(format) {
+    case RK_FORMAT_RGBA_8888:
+		ret = RGBA_8888;
+		break;
+    case RK_FORMAT_RGBX_8888:
+		ret = RGBX_8888;
+		break;
+    case RK_FORMAT_BGRA_8888:
+		ret = BGRA_8888;
+		break;
+    case RK_FORMAT_RGB_888:
+		ret = RGB_888;
+		break;
+    case RK_FORMAT_RGB_565:
+		ret = RGB_565;
+		break;
+    case RK_FORMAT_RGBA_5551:
+		ret = RGBA_5551;
+		break;
+    case RK_FORMAT_RGBA_4444:
+		ret = RGBA_4444;
+		break;
+    case RK_FORMAT_YCbCr_422_SP:
+		ret = YCbCr_422_SP;
+		break;
+    case RK_FORMAT_YCrCb_NV12_SP:
+		ret = YCrCb_NV12_SP;
+		break;
+    case RK_FORMAT_YCrCb_444:
+		ret = YCrCb_444;
+		break;
+    case RK_FORMAT_DEFAULT:
+    default:
+    	ret = 0;
+    }
+
+    return ret;
+}
 //--------------------------------------------------------------------------------
 
 OvlMemPgPtr OvlGetBufByLay( OvlLayPg layout, OvlFbBufType BufType)
@@ -207,44 +249,44 @@ int OvlGetSidByMemPg( OvlMemPgPtr PMemPg)
 
 //-----------------------------------------------------------------------------------
 #if defined( RGA_ENABLE ) || defined( IPP_ENABLE )
-static void ovlSelHwMods( int mode, OvlLayPg layout, Bool Src)
+static void ovlSelHwMods(OvlLayoutFormatType format, OvlLayPg layout, Bool Src)
 {
 
 
     uint8_t		IPP_mode;
     uint8_t		RGA_mode;
 
-    switch(mode) {
-    case RGBX_8888:
-    case RGBA_8888:
+    switch(format) {
+    case RK_FORMAT_RGBX_8888:
+    case RK_FORMAT_RGBA_8888:
     	RGA_mode = RK_FORMAT_RGBX_8888;
     	IPP_mode = IPP_XRGB_8888;
     	break;
-    case RGB_888:
+    case RK_FORMAT_RGB_888:
     	RGA_mode = RK_FORMAT_RGB_888;
     	IPP_mode = 0;//TODO: add support to ipp
     	break;
-    case RGB_565:
+    case RK_FORMAT_RGB_565:
     	RGA_mode = RK_FORMAT_RGB_565;
     	IPP_mode = IPP_RGB_565;
     	break;
-    case YCrCb_NV12_SP:
+    case RK_FORMAT_YCrCb_NV12_SP:
     	RGA_mode = RK_FORMAT_YCbCr_420_SP;
     	IPP_mode = IPP_Y_CBCR_H2V2;//nearest suitable
         break;
-    case YCbCr_422_SP:
+    case RK_FORMAT_YCbCr_422_SP:
     	RGA_mode = RK_FORMAT_YCrCb_422_SP;
     	IPP_mode = IPP_Y_CBCR_H2V1;//nearest suitable
     	break;
-    case YCrCb_NV12_P:
+    case RK_FORMAT_YCrCb_NV12_P:
     	RGA_mode = RK_FORMAT_YCbCr_420_P;
     	IPP_mode = IPP_Y_CBCR_H2V2;
         break;
-    case YCbCr_422_P:
+    case RK_FORMAT_YCbCr_422_P:
     	RGA_mode = RK_FORMAT_YCrCb_422_P;
     	IPP_mode = IPP_Y_CBCR_H2V1;
     	break;
-    case YCrCb_444:
+    case RK_FORMAT_YCrCb_444:
     	break;
     default:
     	RGA_mode = RK_FORMAT_RGBX_8888;
@@ -325,15 +367,15 @@ int ovlclearbuf( ovlMemPgPtr PMemPg)
 	return 0;
 }
 //--------------------------------------------------------------------
-int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, unsigned char mode)
+int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, OvlLayoutFormatType format)
 {
     int ret=0;
 
     if(LayValidAndNotUI(layout)){/*TODO !UIL*/
     	if((xres > overlay.OvlLay[layout].var.xres_virtual)||(yres > overlay.OvlLay[layout].var.yres_virtual)) return -EINVAL;
 //    if((xres > overlay.cur_var.xres)||(yres > overlay.cur_var.yres)) return -1;
-    	if(mode>0)
-    		overlay.OvlLay[layout].var.nonstd = mode;
+    	if(format != RK_FORMAT_DEFAULT)
+    		overlay.OvlLay[layout].var.nonstd = ovlToHWRkFormat(format);
     	if(xres>0)
     		overlay.OvlLay[layout].var.xres = xres;
     	if(yres>0)
@@ -362,7 +404,7 @@ static int ovlUpdVarOnChangeRes( OvlLayPg layout)
     	return -ENODEV;
 }
 //----------------------------------------------------------------------------------
-int OvlSetupFb( OvlLayPg layout, int SrcFrmt, int DstFrmt, unsigned short xres, unsigned short yres)
+int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, unsigned short xres, unsigned short yres)
 {
     int ret;
 
@@ -624,26 +666,6 @@ void OvlFreeLay( OvlLayPg layout)
     	return UMP_INVALID_SECURE_ID;
 }
 */
-//-----------------------------------------------------------------
-int OvlRkModeByFOURCC(int fourcc)
-{
-	int ret;
-
-    switch(fourcc) {
-    case FOURCC_YV12://YVU planar 	needs to be converted into a SemiPlanar format (with HW-RGA or SW)
-    case FOURCC_I420://YUV identical to YV12 except that the U and V plane order is reversed
-    	ret = YCrCb_NV12_SP;//SP disp format
-        break;
-    case FOURCC_UYVY://packed U0Y0V0Y1 U2Y2V2Y3		needs to unpacking in SemiPlanar
-    case FOURCC_YUY2://packed low Y0U0Y1V0 hi
-    	ret = YCbCr_422_SP;
-    	break;
-    default:
-    	ret = RGBX_8888;
-    }
-
-    return ret;
-}
 //++++++++++++++++++++++++++++++init/close+++++++++++++++++++++++++
 int OvlInitMainFB(const char *dev_name, int depth)
 {
@@ -828,6 +850,7 @@ int Open_RkLayers(void)
 	int ret, i;
 //    struct usi_ump_mbs_info uumi;
 
+	overlay.fd_USI = 0;
     ret = ump_open();
     if (ret != UMP_OK){
     	ERRMSG( "HW:Error open UMP");

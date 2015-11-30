@@ -19,7 +19,7 @@
 #include "rk_layers_priv.h"
 
 //convert packed U0Y0V0Y1 U2Y2V2Y3 to SemiPlanar for display
-void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int h, int w, Bool reverse)
+void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int w, int h, Bool reverse)
 {
 	uint32_t Fvars[4];
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
@@ -87,7 +87,7 @@ void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int h,
 }
 //-----------------------------------------------------------------
 void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, unsigned int offs_U, unsigned int offs_V,
-		int dstPitch, int h, int w)
+		int dstPitch, int w, int h)
 {
     uint32_t Fvars[4];
     void *src_U = src_Y + offs_U;

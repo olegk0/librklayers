@@ -33,12 +33,12 @@ OvlHWRec overlay;
 #define MAX_PATH                1024
 
 #ifdef DEBUG
-#define OVLDBG(format, args...)		printf(format "\n", ## args)
+#define OVLDBG(format, args...)		printf("RK_LAY(%s):" format "\n", __func__, ## args)
 #else
 #define OVLDBG(format, args...)
 #endif
 
-#define ERRMSG(format, args...)		printf(format "\n", ## args)
+#define ERRMSG(format, args...)		printf("RK_ERR(%s):"format "\n", __func__, ## args)
 
 //******************************************************************************
 //int xf86LoadKernelModule(const char *modName)
@@ -376,10 +376,14 @@ int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, Ovl
 //    if((xres > overlay.cur_var.xres)||(yres > overlay.cur_var.yres)) return -1;
     	if(format != RK_FORMAT_DEFAULT)
     		overlay.OvlLay[layout].var.nonstd = ovlToHWRkFormat(format);
-    	if(xres>0)
+    	if(xres>0){
     		overlay.OvlLay[layout].var.xres = xres;
-    	if(yres>0)
+//    		overlay.OvlLay[layout].var.xres_virtual = xres;
+    	}
+    	if(yres>0){
     		overlay.OvlLay[layout].var.yres = yres;
+//    		overlay.OvlLay[layout].var.yres_virtual = yres;
+    	}
     	ret = ioctl(FbByLay(layout)->fd, FBIOPUT_VSCREENINFO, &overlay.OvlLay[layout].var);
 
 /*    	if(ret == 0){
@@ -849,7 +853,9 @@ int Open_RkLayers(void)
 {
 	int ret, i;
 //    struct usi_ump_mbs_info uumi;
-
+	OVLDBG("");
+	OVLDBG("overlay:%p",&overlay);
+	OVLDBG("overlay.fd_USI:%p",&overlay.fd_USI);
 	overlay.fd_USI = 0;
     ret = ump_open();
     if (ret != UMP_OK){

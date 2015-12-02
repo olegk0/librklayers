@@ -18,8 +18,10 @@ LDFLAGS = -shared -lUMP -lpthread
 
 INSTALL_DIR = /usr/lib/
 TARGET_LIB = librklayers.so
-SRCS += rk_layers.c rk_video.c rk_memfunc.c
-OBJS = $(SRCS:.c=.o)
+SRCS += rk_layers.c rk_video.c rk_memfunc.c chroma_neon.S
+
+OBJS = $(addsuffix .o,$(basename $(SRCS)))
+DEP = $(addsuffix .d,$(basename $(SRC)))
 
 CC = gcc
 RM = rm -f
@@ -31,14 +33,17 @@ all: ${TARGET_LIB}
 $(TARGET_LIB): $(OBJS)
 	$(CC) ${LDFLAGS} -o $@ $^
 
-$(SRCS:.c=.d):%.d:%.c
+$(DEP):%.d:%.c
 	$(CC) $(CFLAGS) -MM $< >$@
 
-include $(SRCS:.c=.d)
+%.o: %.S                                                                               
+	$(CC) -c $< -o $@ 
+
+include $(wildcard $(DEP))
 
 .PHONY: clean
 clean:
-	${RM} ${TARGET_LIB} ${OBJS} $(SRCS:.c=.d) ${INSTALL_DIR}${TARGET_LIB}
+	${RM} ${TARGET_LIB} ${OBJS} $(DEP) ${INSTALL_DIR}${TARGET_LIB}
 
 .PHONY: install
 install:

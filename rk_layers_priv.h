@@ -117,16 +117,16 @@ typedef struct {
 
 #define ToIntMemPg(mpg)	((ovlMemPgPtr)mpg)
 #define ToIntFb(fb)	((ovlFbPtr)fb)
-#define FbByLay(layout) (overlay.OvlLay[layout].OvlFb)
+#define FbByLay(layout) (Ovl_priv.OvlLay[layout].OvlFb)
 #define MBufByLay(layout) (FbByLay(layout)->CurMemPg)
 
 #define LayIsUIfb(layout)	(FbByLay(layout)->Type == UIL)
-#define LayValid(lay) (lay < overlay.OvlsCnt && lay >= 0)
+#define LayValid(lay) (lay < Ovl_priv.OvlsCnt && lay >= 0)
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))
 
 #define MemPgIsUI(mpg)	(ToIntMemPg(mpg)->MemPgType == UIFB_MEM)
 
-extern OvlHWRec overlay;
+extern OvlHWRec Ovl_priv;
 
 ovlMemPgPtr ovlInitMemPgDef();
 int ovlInitUSIHW();

@@ -21,7 +21,7 @@
 #include <string.h>
 
 //convert packed U0Y0V0Y1 U2Y2V2Y3 to SemiPlanar for display
-void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int w, int h, Bool reverse)
+void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y;
@@ -31,30 +31,48 @@ void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int w,
 	else
 		dst_UV += ToIntMemPg(PMemPg)->offset_mio;
 
-    struct yuv_pack in = {src, w<<1};
+    struct yuv_pack in = {src, srcPitch};
     struct y_uv_planes out = {dst_Y, dst_UV, dstPitch};
     yuyv_semiplanar_neon (&out, &in, w, h);
 
 }
 //-----------------------------------------------------------------
-void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, unsigned int offs_U, unsigned int offs_V,
-		int dstPitch, int w, int h)
+void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,
+		int srcPitch, int dstPitch, int w, int h)
 {
-	int i;
-    void *src_U = src_Y + offs_U;
-	void *src_V = src_Y + offs_V;
+//	int i;
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_mio;
 
-	if(dstPitch == w)
-		memcpy(dst_Y, src_Y, w*h);
-	else{
-		struct y_copy in = {dst_Y, src_Y};
-		copy_neon (&in, dstPitch, w, h);
-	}
-
+//	if(dstPitch == w)
+//		memcpy(dst_Y, src_Y, w*h);
+//	else{
+		struct y_copy inY = {dst_Y, src_Y, srcPitch};
+		copy_neon (&inY, dstPitch, w, h);
+//	}
+		/*
+		for(i=0;i<h;i++){
+			memcpy(dst_Y, src_Y, w);
+			dst_Y += dstPitch;
+			src_Y += w;
+		}
+*/
     struct yuv_pack out = {dst_UV, dstPitch};
-    struct uv_planes in = {src_U, src_V, w>>1};
+    struct uv_planes in = {src_U, src_V, srcPitch>>1};
     interleave_chroma_neon (&out, &in, w, h);
+
+}
+
+void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
+		int srcPitch, int dstPitch, int w, int h)
+{
+	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
+	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_mio;
+
+	struct y_copy inY = {dst_Y, src_Y, srcPitch};
+	copy_neon (&inY, dstPitch, w, h);
+
+	struct y_copy in = {dst_UV, src_UV, srcPitch};
+	copy_neon (&in, dstPitch, w>>1, h>>1);
 
 }

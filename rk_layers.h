@@ -86,9 +86,11 @@ int OvlSetHDMI(int xres,int yres);
 
 //int OvlClearBuf(OvlMemPgPtr PMemPg);
 //int OvlReset();
-void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int w, int h, Bool reverse);
-void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, unsigned int offs_U, unsigned int offs_V,
-		int dstPitch, int w, int h);
+void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse);
+void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,
+		int srcPitch, int dstPitch, int w, int h);
+void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
+		int srcPitch, int dstPitch, int w, int h);
 int OvlSetModeFb(OvlLayPg layout, unsigned short xres, unsigned short yres, OvlLayoutFormatType format);
 int OvlResetFB(OvlLayPg layout);
 int OvlCopyHWBufCF(uint32_t SrcYAddr, uint32_t SrcUVAddr, uint32_t SrcVAddr,

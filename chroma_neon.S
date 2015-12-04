@@ -118,35 +118,35 @@ yuyv_semiplanar_neon:
 #define sY		r4
 #define sYb		r5
 #define dYb		r6
-#define CNT		lr
+#define CNT		r7
 
 	.global copy_neon
     .type	copy_neon, %function
-copy_neon:
-    push		{r4-r6,lr}
-    ldmia		r0,	{dY, sY}
+copy_neon:@ dY:r0 sY:r4 sPitch:lr dPitch:r1 Width:r2 Height:r3
+    push		{r4-r7,lr}
+    ldmia		r0,	{dY, sY, SPITCH}
     cmp		HEIGHT,	#0
     mov		sYb,	sY
     mov		dYb,	dY
 1:
     movsgt		CNT,	WIDTH
-    pople		{r4-r6,pc}
+    pople		{r4-r7,pc}
 
     mov sY,	sYb
 	mov dY,	dYb
 2:
-@    pld		[sY, #64]
-    pld		[sY, #0xC0]
+    pld		[sY, #128]@???
+@    pld		[sY, #0xC0]
 @    subs		COUNT,	COUNT,	#8
 @    vld2.u8		{d0},	[sY]!
 @    vst1.u8		{d0},	[dY]!
-	vldm	sY!,{d0-d7}
-	vstm	dY!,{d0-d7}
-	subs	CNT,	CNT,	64
+	vldm	sY!,{d0-d3}
+	vstm	dY!,{d0-d3}
+	subs	CNT,	CNT,	32
     bgt		2b
 
     subs		HEIGHT,	#1
     add		dYb, dYb,	DPITCH3
-    add		sYb, sYb,	WIDTH
+    add		sYb, sYb,	SPITCH
     b		1b
 

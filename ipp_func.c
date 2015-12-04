@@ -31,15 +31,15 @@ static int ovlIppBlit( struct rk29_ipp_req *ipp_req)
 
     int ret, timeout = 0;
 
-    while(pthread_mutex_trylock(&overlay.ippmutex) ==  EBUSY){
+    while(pthread_mutex_trylock(&Ovl_priv.ippmutex) ==  EBUSY){
 	timeout++;
 	if(timeout > HW_TIMEOUT){
 	    OVLDBG("Timeout ipp");
 	    return -1;
 	}
     }
-    ret = ioctl(overlay.fd_IPP, IPP_BLIT_SYNC, ipp_req);
-    pthread_mutex_unlock(&overlay.ippmutex);
+    ret = ioctl(Ovl_priv.fd_IPP, IPP_BLIT_SYNC, ipp_req);
+    pthread_mutex_unlock(&Ovl_priv.ippmutex);
     return ret;
 }
 //-----------------------------------------------------------------------

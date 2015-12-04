@@ -54,6 +54,7 @@ struct yuv_pack
 struct y_copy
 {
     void *d_y, *s_y;
+    size_t s_pitch;
 };
 
 /* UYVY to semiplanar  conversion. */

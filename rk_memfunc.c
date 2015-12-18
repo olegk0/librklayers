@@ -90,10 +90,12 @@ void *OvlMapBufMem( OvlMemPgPtr PMemPg)
     if(PMemPg != NULL){
     	if(ToIntMemPg(PMemPg)->fb_mmap == NULL){
     		if(ToIntMemPg(PMemPg)->MemPgType == UIFB_MEM){
-    			ToIntMemPg(PMemPg)->fb_mmap = mmap( NULL, Ovl_priv.MaxPgSize, PROT_READ | PROT_WRITE, MAP_SHARED, Ovl_priv.OvlFb[UILayer].fd, 0);
+    			ToIntMemPg(PMemPg)->fb_mmap = mmap( NULL, ToIntMemPg(PMemPg)->buf_size, PROT_READ | PROT_WRITE, MAP_SHARED, Ovl_priv.OvlFb[UILayer].fd, 0);
     			//fbdevHWMapVidmem();
-//        		if(PMemPg->fb_mmap == MAP_FAILED)
-//        			PMemPg->fb_mmap = NULL;
+        		if(ToIntMemPg(PMemPg)->fb_mmap == MAP_FAILED){
+        			ERRMSG("Map failed:%d",errno);
+        			ToIntMemPg(PMemPg)->fb_mmap = NULL;
+        		}
         	}else{
         		if( ToIntMemPg(PMemPg)->ump_fb_secure_id == UMP_INVALID_SECURE_ID)
         			return NULL;
@@ -110,7 +112,16 @@ void *OvlMapBufMem( OvlMemPgPtr PMemPg)
     return NULL;
 }
 //------------------------------------------------------------------
-OvlMemPgPtr OvlAllocMemPg( unsigned long size)//except UI
+unsigned long OvlGetYUVoffsetMemPg( OvlMemPgPtr PMemPg)
+{
+
+    if(PMemPg)
+    	return ToIntMemPg(PMemPg)->offset_mio;
+    else
+    	return 0;
+}
+//------------------------------------------------------------------
+OvlMemPgPtr OvlAllocMemPg( unsigned long size, unsigned long YUV_offset)//except UI
 {
     OvlMemPgPtr MemPg;
     struct usi_ump_mbs uum;
@@ -122,7 +133,10 @@ OvlMemPgPtr OvlAllocMemPg( unsigned long size)//except UI
     		ToIntMemPg(MemPg)->buf_size = uum.size;
     		ToIntMemPg(MemPg)->phy_addr = uum.addr;
     		ToIntMemPg(MemPg)->ump_fb_secure_id = uum.secure_id;
-    		ToIntMemPg(MemPg)->offset_mio = ((ToIntMemPg(MemPg)->buf_size / 2) & ~PAGE_MASK);
+    		if(YUV_offset)
+    			ToIntMemPg(MemPg)->offset_mio = ((YUV_offset + PAGE_MASK) & ~PAGE_MASK);
+    		else
+    			ToIntMemPg(MemPg)->offset_mio = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
     	}else{
     		MFREE(MemPg);
     	}

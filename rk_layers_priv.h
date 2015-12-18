@@ -41,6 +41,16 @@
 #include <ump/ump.h>
 #include <ump/ump_ref_drv.h>
 #include "rk3066.h"
+#include <stdio.h>
+#include "chroma_neon.h"
+
+#ifdef DEBUG
+#define OVLDBG(format, args...)		printf("RK_LAY(%s):" format "\n", __func__, ## args)
+#else
+#define OVLDBG(format, args...)
+#endif
+
+#define ERRMSG(format, args...)		printf("RK_ERR(%s):"format "\n", __func__, ## args)
 
 #define PAGE_MASK    (getpagesize() - 1)
 #define MFREE(p)	{free(p);p=NULL;}

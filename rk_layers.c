@@ -16,8 +16,6 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -31,14 +29,6 @@ OvlHWRec Ovl_priv;
 
 #define MODPROBE_PATH_FILE      "/proc/sys/kernel/modprobe"
 #define MAX_PATH                1024
-
-#ifdef DEBUG
-#define OVLDBG(format, args...)		printf("RK_LAY(%s):" format "\n", __func__, ## args)
-#else
-#define OVLDBG(format, args...)
-#endif
-
-#define ERRMSG(format, args...)		printf("RK_ERR(%s):"format "\n", __func__, ## args)
 
 //******************************************************************************
 //int xf86LoadKernelModule(const char *modName)
@@ -177,9 +167,9 @@ int OvlSetHDMI(int xres,int yres)
     return ret;
 }
 //-----------------------------------------------------------------
-int ovlToHWRkFormat(OvlLayoutFormatType format)
+uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
 {
-	int ret;
+	uint32_t ret;
 
     switch(format) {
     case RK_FORMAT_RGBA_8888:
@@ -219,6 +209,77 @@ int ovlToHWRkFormat(OvlLayoutFormatType format)
 
     return ret;
 }
+//-----------------------------------------------------------------
+OvlLayoutFormatType ovlFromHWRkFormat(uint32_t format)
+{
+	uint32_t ret;
+
+    switch(format) {
+    case RGBA_8888:
+		ret = RK_FORMAT_RGBA_8888;
+		break;
+    case RGBX_8888:
+		ret = RK_FORMAT_RGBX_8888;
+		break;
+    case BGRA_8888:
+		ret = RK_FORMAT_BGRA_8888;
+		break;
+    case RGB_888:
+		ret = RK_FORMAT_RGB_888;
+		break;
+    case RGB_565:
+		ret = RK_FORMAT_RGB_565;
+		break;
+    case RGBA_5551:
+		ret = RK_FORMAT_RGBA_5551;
+		break;
+    case RGBA_4444:
+		ret = RK_FORMAT_RGBA_4444;
+		break;
+    case YCbCr_422_SP:
+		ret = RK_FORMAT_YCbCr_422_SP;
+		break;
+    case YCrCb_NV12_SP:
+		ret = RK_FORMAT_YCrCb_NV12_SP;
+		break;
+    case YCrCb_444:
+		ret = RK_FORMAT_YCrCb_444;
+		break;
+//    case RK_FORMAT_DEFAULT:
+    default:
+    	ret = 0;
+    }
+
+    return ret;
+}
+//-----------------------------------------------------------------
+int OvlGetBppByLay(OvlLayPg layout)
+{
+	int ret;
+
+	if(!LayValid(layout))
+		return -1;
+
+    switch(Ovl_priv.OvlLay[layout].var.nonstd) {
+    case RGBA_8888:
+    case RGBX_8888:
+    case BGRA_8888:
+		ret = 4;
+		break;
+    case RGB_888:
+		ret = 3;
+		break;
+    case RGB_565:
+    case RGBA_5551:
+    case RGBA_4444:
+		ret = 2;
+		break;
+    default:
+    	ret = 0;
+    }
+
+    return ret;
+}
 //--------------------------------------------------------------------------------
 
 OvlMemPgPtr OvlGetBufByLay( OvlLayPg layout, OvlFbBufType BufType)
@@ -231,16 +292,40 @@ OvlMemPgPtr OvlGetBufByLay( OvlLayPg layout, OvlFbBufType BufType)
 }
 
 //--------------------------------------------------------------------------------
-int OvlGetVXresByLay( OvlLayPg layout)
+uint32_t OvlGetVXresByLay( OvlLayPg layout)
 {
 	if(LayValid(layout))
 		return Ovl_priv.OvlLay[layout].var.xres_virtual;
     else
-    	return -1;
+    	return 0;
 }
-
 //--------------------------------------------------------------------------------
-int OvlGetSidByMemPg( OvlMemPgPtr PMemPg)
+uint32_t OvlGetXresByLay( OvlLayPg layout)
+{
+	if(LayValid(layout))
+		return Ovl_priv.OvlLay[layout].var.xres;
+    else
+    	return 0;
+}
+//--------------------------------------------------------------------------------
+uint32_t OvlGetYresByLay( OvlLayPg layout)
+{
+	if(LayValid(layout))
+		return Ovl_priv.OvlLay[layout].var.yres;
+    else
+    	return 0;
+}
+//--------------------------------------------------------------------------------
+
+OvlLayoutFormatType OvlGetModeByLay( OvlLayPg layout)
+{
+	if(LayValid(layout))
+		return ovlFromHWRkFormat(Ovl_priv.OvlLay[layout].var.nonstd);
+    else
+    	return 0;
+}
+//--------------------------------------------------------------------------------
+uint32_t OvlGetSidByMemPg( OvlMemPgPtr PMemPg)
 {
     if(PMemPg == NULL)
     	return UMP_INVALID_SECURE_ID;
@@ -363,8 +448,14 @@ int ovlclearbuf( ovlMemPgPtr PMemPg)
 {
     if(PMemPg == NULL || PMemPg->fb_mmap == NULL || MemPgIsUI(PMemPg))
     	return -ENODEV;
-	memset(PMemPg->fb_mmap,0,PMemPg->buf_size);
+//	memset(PMemPg->fb_mmap,0,PMemPg->buf_size);
+	memset_neon (PMemPg->fb_mmap,0,PMemPg->buf_size);
 	return 0;
+}
+//--------------------------------------------------------------------------------
+int OvlClrMemPg(OvlMemPgPtr PMemPg)
+{
+	return ovlclearbuf( ToIntMemPg(PMemPg));
 }
 //--------------------------------------------------------------------
 int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, OvlLayoutFormatType format)
@@ -401,6 +492,7 @@ int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, Ovl
 static int ovlUpdVarOnChangeRes( OvlLayPg layout)
 {
 	if(LayValid(layout)){
+	    ioctl(Ovl_priv.OvlFb[UILayer].fd, FBIOGET_VSCREENINFO, &Ovl_priv.cur_var);
 		memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
 //	Ovl_priv.OvlLay[layout].ResChange = FALSE;
 		return 0;
@@ -458,7 +550,9 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, in
     	pt.poffset_x = Drw_x;
     	pt.poffset_y = Drw_y;
     	pt.ssize_w = Src_w;
+   		Ovl_priv.OvlLay[layout].var.xres_virtual = Src_w;
     	pt.ssize_h = Src_h;
+   		Ovl_priv.OvlLay[layout].var.yres_virtual = Src_h;
 //    pt.scale_w = (Src_w*PANEL_SIZE_X)/Drw_w;
     	pt.scale_w = (Src_w*Ovl_priv.OvlLay[layout].var.xres)/Drw_w;
 //    pt.scale_h = (Src_h*PANEL_SIZE_Y)/Drw_h;
@@ -470,7 +564,7 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, in
     return ret;
 }
 //----------------------------------------------------------------------------------
-int OvlFbLinkMemPg( OvlFbPtr PFb, OvlMemPgPtr MemPg)
+int ovlFbLinkMemPg( OvlFbPtr PFb, OvlMemPgPtr MemPg)
 {
     int ret;
     unsigned long tmp[2];
@@ -484,6 +578,11 @@ int OvlFbLinkMemPg( OvlFbPtr PFb, OvlMemPgPtr MemPg)
     if(!ret)
     	ToIntFb(PFb)->CurMemPg = MemPg;
 	return ret;
+}
+//-----------------
+int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
+{
+	return ovlFbLinkMemPg( FbByLay(layout), MemPg);
 }
 //----------------------------------------------------------------------------------
 int OvlFlipFb( OvlLayPg layout, OvlFbBufType flip, Bool clrPrev)
@@ -506,9 +605,9 @@ int OvlFlipFb( OvlLayPg layout, OvlFbBufType flip, Bool clrPrev)
     			Ovl_priv.OvlLay[layout].FbBufUsed = FRONT_FB;
 
     	}
-    	ret = OvlFbLinkMemPg( FbByLay(layout) , Ovl_priv.OvlLay[layout].FbMemPgs[Ovl_priv.OvlLay[layout].FbBufUsed]);
+    	ret = ovlFbLinkMemPg( FbByLay(layout) , Ovl_priv.OvlLay[layout].FbMemPgs[Ovl_priv.OvlLay[layout].FbBufUsed]);
 
-    	if(clrPrev && prev >=FRONT_FB)
+    	if(clrPrev && prev >= FRONT_FB)
     		ovlclearbuf( Ovl_priv.OvlLay[layout].FbMemPgs[prev]);
 //TODO sync ?
     }else
@@ -571,7 +670,7 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     case UIL:
     case SCALEL:
 //    case NOT_SCALEL:
-    	for(i=0;i<Ovl_priv.OvlsCnt;i++){
+    	for(i=0;i < Ovl_priv.OvlsCnt;i++){
     		if(FbByLay(i)->Type == type){
     			if(!Ovl_priv.OvlLay[i].InUse){
     				lay = i;
@@ -588,7 +687,7 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     		lay = ERRORL;
     	break;
     case ANYL://except UIL
-    	for(i=1;i<Ovl_priv.OvlsCnt;i++){
+    	for(i=1;i < Ovl_priv.OvlsCnt;i++){
     		if(!Ovl_priv.OvlLay[i].InUse){
     			lay = i;
     		}
@@ -609,7 +708,7 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
         				Ovl_priv.OvlLay[lay].FbMemPgs[FRONT_FB]->MemPgType = UIFB_MEM;
         			}
         		}else{
-        			Ovl_priv.OvlLay[lay].FbMemPgs[FRONT_FB] = OvlAllocMemPg( FB_MAXPGSIZE);//TODO size
+        			Ovl_priv.OvlLay[lay].FbMemPgs[FRONT_FB] = OvlAllocMemPg( Ovl_priv.MaxPgSize, 0);//TODO size
         			if(Ovl_priv.OvlLay[lay].FbMemPgs[FRONT_FB])
         				Ovl_priv.OvlLay[lay].FbMemPgs[FRONT_FB]->MemPgType = FB_MEM;
         		}
@@ -620,7 +719,7 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     		OvlFlipFb( lay, FRONT_FB, 0);
 //and back fb if needed
     		if(FbBufAlloc > ALC_FRONT_FB && !Ovl_priv.OvlLay[lay].FbMemPgs[BACK_FB]){
-    			Ovl_priv.OvlLay[lay].FbMemPgs[BACK_FB] = OvlAllocMemPg( FB_MAXPGSIZE);//TODO size
+    			Ovl_priv.OvlLay[lay].FbMemPgs[BACK_FB] = OvlAllocMemPg( Ovl_priv.MaxPgSize, 0);//TODO size
         		if(Ovl_priv.OvlLay[lay].FbMemPgs[BACK_FB])
         			Ovl_priv.OvlLay[lay].FbMemPgs[BACK_FB]->MemPgType = FB_MEM;
         		else{
@@ -792,7 +891,7 @@ int ovl_setup_ovl()
     	goto err;
     }
     Ovl_priv.OvlsCnt++;
-    Ovl_priv.OvlFb[UILayer].fd = open(FB_DEV_UI, O_RDONLY);
+    Ovl_priv.OvlFb[UILayer].fd = open(FB_DEV_UI, O_RDWR);
     if (Ovl_priv.OvlFb[UILayer].fd < 0){
     	ret = Ovl_priv.OvlFb[UILayer].fd;
     	goto err1;

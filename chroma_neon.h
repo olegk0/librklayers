@@ -69,3 +69,5 @@ void interleave_chroma_neon (struct yuv_pack *const out,
 
 void copy_neon (struct y_copy *const in, int d_pitch,
 		             int width, int height) asm("copy_neon");
+
+void memset_neon (void *const dst, int fill, uint32_t size) asm("memset_neon");

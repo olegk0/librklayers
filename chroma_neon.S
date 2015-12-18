@@ -66,10 +66,9 @@ interleave_chroma_neon:
     pld		[V, #64]
 @	vld1.u8		{d1},		[V,:64]!
     vld1.u8		{d1},		[V]!
-    subs		COUNT,	COUNT,	#8
 @	vst2.u8		{d0, d1},	[UV,:128]!
     vst2.u8		{d0, d1},	[UV]!
-
+    subs		COUNT,	COUNT,	#8
     bgt		2b
 
     subs		HEIGHT,	#1
@@ -78,11 +77,17 @@ interleave_chroma_neon:
     add		V,	V,	SPAD
     b		1b
 
+@*************************************************************************
 #define Y	r0
+#define COUNT	r1
+#define WIDTH	r2
+#define HEIGHT	r3
 #define UV2	r4
 #define DPITCH2	r5
 #define DPAD2	r5
 #define S	r6
+#define SPITCH	lr
+#define SPAD	lr
 
 	.global yuyv_semiplanar_neon
     .type	yuyv_semiplanar_neon, %function
@@ -112,28 +117,35 @@ yuyv_semiplanar_neon:
     add		UV2,	UV2,	DPAD2@,	lsr #1
     b		1b
 
+@*************************************************************************
 #define dY		r0
 #define DPITCH3	r1
 #define DPAD3	r1
+#define WIDTH	r2
+#define HEIGHT	r3
 #define sY		r4
 #define sYb		r5
 #define dYb		r6
 #define CNT		r7
+#define SPITCH	lr
+#define SPAD	lr
 
 	.global copy_neon
     .type	copy_neon, %function
-copy_neon:@ dY:r0 sY:r4 sPitch:lr dPitch:r1 Width:r2 Height:r3
+copy_neon:
     push		{r4-r7,lr}
+    vpush		{d0-d3}
     ldmia		r0,	{dY, sY, SPITCH}
-    cmp		HEIGHT,	#0
+    cmp		HEIGHT,	#2
+    ble		3f
+	subs	HEIGHT,	#1
     mov		sYb,	sY
     mov		dYb,	dY
 1:
-    movsgt		CNT,	WIDTH
-    pople		{r4-r7,pc}
+    mov		CNT,	WIDTH
 
-    mov sY,	sYb
-	mov dY,	dYb
+    mov 	sY,	sYb
+	mov 	dY,	dYb
 2:
     pld		[sY, #128]@???
 @    pld		[sY, #0xC0]
@@ -142,11 +154,50 @@ copy_neon:@ dY:r0 sY:r4 sPitch:lr dPitch:r1 Width:r2 Height:r3
 @    vst1.u8		{d0},	[dY]!
 	vldm	sY!,{d0-d3}
 	vstm	dY!,{d0-d3}
-	subs	CNT,	CNT,	32
+	subs	CNT,	#32
     bgt		2b
 
-    subs		HEIGHT,	#1
     add		dYb, dYb,	DPITCH3
     add		sYb, sYb,	SPITCH
-    b		1b
+    subs	HEIGHT,	#1
+    bne		1b
+@	last line
+    mov		sY,	sYb
+	mov 	dY,	dYb
+4:
+	ldr		CNT, [sY], #4
+	str		CNT, [dY], #4
+	subs	WIDTH, #4
+	bge		4b
+3:
+	vpop	{d0-d3}
+    pop		{r4-r7,pc}
 
+@*************************************************************************
+#define DST		r0
+#define FILL	r1
+#define SIZE	r2
+
+	.global memset_neon
+    .type	memset_neon, %function
+memset_neon:
+    push		{lr}
+    vpush		{d0-d3}
+@	round down
+    bics	SIZE, #31
+    beq		3f
+
+	vdup.8	d0, FILL
+	vmov	d1, d0
+	vmov	d2, d0
+	vmov	d3, d0
+
+2:
+    pld		[DST, #128]@???
+	vstm	DST!,{d0-d3}
+	subs	SIZE,	#32
+    bgt		2b
+
+3:
+	vpop	{d0-d3}
+    pop		{pc}

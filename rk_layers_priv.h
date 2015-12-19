@@ -79,7 +79,7 @@ typedef struct {
 	unsigned long	buf_size;
 	unsigned long	phy_addr;
 	OvlMemPgType	MemPgType;
-	unsigned long	offset_mio;
+	unsigned long	offset_uv;
 } ovlMemPgRec, *ovlMemPgPtr;
 
 typedef struct {

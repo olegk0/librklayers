@@ -27,9 +27,9 @@ void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w,
 	void *dst_UV = dst_Y;
 
 	if(reverse)
-		dst_Y += ToIntMemPg(PMemPg)->offset_mio;
+		dst_Y += ToIntMemPg(PMemPg)->offset_uv;
 	else
-		dst_UV += ToIntMemPg(PMemPg)->offset_mio;
+		dst_UV += ToIntMemPg(PMemPg)->offset_uv;
 
     struct yuv_pack in = {src, srcPitch};
 //    struct y_uv_planes out = {dst_Y, dst_UV, dstPitch};
@@ -44,7 +44,7 @@ void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U,
 {
 //	int i;
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
-	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_mio;
+	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_uv;
 
 //	if(dstPitch == w)
 //		memcpy(dst_Y, src_Y, w*h);
@@ -68,35 +68,33 @@ void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U,
 }
 
 void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
-		int srcPitch, int w, int h)
-//		int srcPitch, int dstPitch, int w, int h)
+		int srcPitch, int dstPitch, int w, int h)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
-	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_mio;
+	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_uv;
 
 	struct y_copy inY = {dst_Y, src_Y, srcPitch};
-//	copy_neon (&inY, dstPitch, w, h);
-	copy_neon (&inY, w, w, h);
+	copy_neon (&inY, dstPitch, w, h);
+//	copy_neon (&inY, w, w, h);
 
 	struct y_copy in = {dst_UV, src_UV, srcPitch};
-//	copy_neon (&in, dstPitch, w, h>>1);
-	copy_neon (&in, w, w, h>>1);
+	copy_neon (&in, dstPitch, w, h>>1);
+//	copy_neon (&in, w, w, h>>1);
 
 }
 
 void OvlCopyNV16SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
-		int srcPitch, int w, int h)
-//		int srcPitch, int dstPitch, int w, int h)
+		int srcPitch, int dstPitch, int w, int h)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
-	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_mio;
+	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_uv;
 
 	struct y_copy inY = {dst_Y, src_Y, srcPitch};
-//	copy_neon (&inY, dstPitch, w, h);
-	copy_neon (&inY, w, w, h);
+	copy_neon (&inY, dstPitch, w, h);
+//	copy_neon (&inY, w, w, h);
 
 	struct y_copy in = {dst_UV, src_UV, srcPitch};
-//	copy_neon (&in, dstPitch, w, h);
-	copy_neon (&in, w, w, h);
+	copy_neon (&in, dstPitch, w, h);
+//	copy_neon (&in, w, w, h);
 
 }

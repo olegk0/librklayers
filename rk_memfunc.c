@@ -116,7 +116,7 @@ unsigned long OvlGetYUVoffsetMemPg( OvlMemPgPtr PMemPg)
 {
 
     if(PMemPg)
-    	return ToIntMemPg(PMemPg)->offset_mio;
+    	return ToIntMemPg(PMemPg)->offset_uv;
     else
     	return 0;
 }
@@ -134,9 +134,9 @@ OvlMemPgPtr OvlAllocMemPg( unsigned long size, unsigned long YUV_offset)//except
     		ToIntMemPg(MemPg)->phy_addr = uum.addr;
     		ToIntMemPg(MemPg)->ump_fb_secure_id = uum.secure_id;
     		if(YUV_offset)
-    			ToIntMemPg(MemPg)->offset_mio = ((YUV_offset + PAGE_MASK) & ~PAGE_MASK);
+    			ToIntMemPg(MemPg)->offset_uv = ((YUV_offset + PAGE_MASK) & ~PAGE_MASK);
     		else
-    			ToIntMemPg(MemPg)->offset_mio = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
+    			ToIntMemPg(MemPg)->offset_uv = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
     	}else{
     		MFREE(MemPg);
     	}

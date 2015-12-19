@@ -573,7 +573,7 @@ int ovlFbLinkMemPg( OvlFbPtr PFb, OvlMemPgPtr MemPg)
     	return -EINVAL;
 
 	tmp[0] = ToIntMemPg(MemPg)->phy_addr;
-	tmp[1] = tmp[0] + ToIntMemPg(MemPg)->offset_mio;
+	tmp[1] = tmp[0] + ToIntMemPg(MemPg)->offset_uv;
     ret = ioctl(ToIntFb(PFb)->fd, RK_FBIOSET_YUV_ADDR, &tmp);
     if(!ret)
     	ToIntFb(PFb)->CurMemPg = MemPg;

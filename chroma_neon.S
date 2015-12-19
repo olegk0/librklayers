@@ -119,14 +119,13 @@ yuyv_semiplanar_neon:
 
 @*************************************************************************
 #define dY		r0
-#define DPITCH3	r1
-#define DPAD3	r1
+#define DPITCH	r1
+#define DPAD	r1
 #define WIDTH	r2
 #define HEIGHT	r3
 #define sY		r4
-#define sYb		r5
-#define dYb		r6
-#define CNT		r7
+#define CNT		r5
+#define BWIDTH	r6
 #define SPITCH	lr
 #define SPAD	lr
 
@@ -139,13 +138,18 @@ copy_neon:
     cmp		HEIGHT,	#2
     ble		3f
 	subs	HEIGHT,	#1
-    mov		sYb,	sY
-    mov		dYb,	dY
+
+	mov		BWIDTH, WIDTH
+@	round	up 32bytes align
+	add		WIDTH,	#31
+	bic		WIDTH, #31
+
+	sub		DPAD, DPITCH, WIDTH
+	sub		SPAD, SPITCH, WIDTH
 1:
     mov		CNT,	WIDTH
 
-    mov 	sY,	sYb
-	mov 	dY,	dYb
+@	copy with 32bytes accuracy
 2:
     pld		[sY, #128]@???
 @    pld		[sY, #0xC0]
@@ -157,18 +161,16 @@ copy_neon:
 	subs	CNT,	#32
     bgt		2b
 
-    add		dYb, dYb,	DPITCH3
-    add		sYb, sYb,	SPITCH
+    add		dY, DPAD
+    add		sY, SPAD
     subs	HEIGHT,	#1
     bne		1b
-@	last line
-    mov		sY,	sYb
-	mov 	dY,	dYb
+@	last line with 4bytes accuracy
 4:
 	ldr		CNT, [sY], #4
 	str		CNT, [dY], #4
-	subs	WIDTH, #4
-	bge		4b
+	subs	BWIDTH, #4
+	bgt		4b
 3:
 	vpop	{d0-d3}
     pop		{r4-r7,pc}

@@ -129,7 +129,8 @@ int OvlSetupFb(OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType
 int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg);
 //------------------------------------------------------------
 int OvlClrMemPg(OvlMemPgPtr PMemPg);
-unsigned long OvlGetYUVoffsetMemPg( OvlMemPgPtr PMemPg);
+unsigned long OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg);
+uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg);
 void * OvlMapBufMem(OvlMemPgPtr PMemPg);
 int OvlUnMapBufMem(OvlMemPgPtr PMemPg);
 OvlLayPg OvlAllocLay(OvlLayoutType type, OvlFbBufAllocType FbBufAlloc);

@@ -113,11 +113,20 @@ void *OvlMapBufMem( OvlMemPgPtr PMemPg)
     return NULL;
 }
 //------------------------------------------------------------------
-unsigned long OvlGetYUVoffsetMemPg( OvlMemPgPtr PMemPg)
+unsigned long OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg)
 {
 
     if(PMemPg)
     	return ToIntMemPg(PMemPg)->offset_uv;
+    else
+    	return 0;
+}
+//------------------------------------------------------------------
+uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg)
+{
+
+    if(PMemPg)
+    	return ToIntMemPg(PMemPg)->phy_addr;
     else
     	return 0;
 }

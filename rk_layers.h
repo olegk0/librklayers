@@ -94,9 +94,9 @@ void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void
 void OvlCopyNV16SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
 		int srcPitch, int dstPitch, int w, int h);
 */
-void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w, int h, Bool reverse);
+void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse);
 void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,
-		int srcPitch, int w, int h);
+		int srcPitch, int dstPitch, int w, int h);
 void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
 		int srcPitch, int dstPitch, int w, int h);
 void OvlCopyNV16SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,

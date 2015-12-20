@@ -140,6 +140,7 @@ copy_neon:
 	subs	HEIGHT,	#1
 
 	mov		BWIDTH, WIDTH
+	bic		BWIDTH, #3
 @	round	up 32bytes align
 	add		WIDTH,	#31
 	bic		WIDTH, #31
@@ -151,7 +152,7 @@ copy_neon:
 
 @	copy with 32bytes accuracy
 2:
-    pld		[sY, #128]@???
+@    pld		[sY, #128]@???
 @    pld		[sY, #0xC0]
 @    subs		COUNT,	COUNT,	#8
 @    vld2.u8		{d0},	[sY]!

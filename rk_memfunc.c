@@ -29,7 +29,8 @@ int ovlUSIAllocMem( struct usi_ump_mbs *uum)
 //    int ret;
 
     if(uum->size < USI_MIN_ALLOC_SIZE)
-    	return -EINVAL;
+    	uum->size = USI_MIN_ALLOC_SIZE;
+//    	return -EINVAL;
     return ioctl(Ovl_priv.fd_USI, USI_ALLOC_MEM_BLK, uum);
 }
 //-------------------------------------------------------------
@@ -121,25 +122,30 @@ unsigned long OvlGetYUVoffsetMemPg( OvlMemPgPtr PMemPg)
     	return 0;
 }
 //------------------------------------------------------------------
-OvlMemPgPtr OvlAllocMemPg( unsigned long size, unsigned long YUV_offset)//except UI
+OvlMemPgPtr OvlAllocMemPg( unsigned long size, unsigned long UV_offset)//except UI
 {
     OvlMemPgPtr MemPg;
     struct usi_ump_mbs uum;
+    int ret;
 
     MemPg = ovlInitMemPgDef();
     if(MemPg){
     	uum.size = size;
-    	if(!ovlUSIAllocMem( &uum)){
+    	ret = ovlUSIAllocMem( &uum);
+    	if(!ret){
     		ToIntMemPg(MemPg)->buf_size = uum.size;
     		ToIntMemPg(MemPg)->phy_addr = uum.addr;
     		ToIntMemPg(MemPg)->ump_fb_secure_id = uum.secure_id;
-    		if(YUV_offset)
-    			ToIntMemPg(MemPg)->offset_uv = ((YUV_offset + PAGE_MASK) & ~PAGE_MASK);
+    		if(UV_offset)
+    			ToIntMemPg(MemPg)->offset_uv = ((UV_offset + PAGE_MASK) & ~PAGE_MASK);
     		else
     			ToIntMemPg(MemPg)->offset_uv = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
     	}else{
+    		ERRMSG( "Error USIAllocMem:%d",ret);
     		MFREE(MemPg);
     	}
+    }else{
+    	ERRMSG( "Error InitMemPgDef");
     }
     return MemPg;
 }

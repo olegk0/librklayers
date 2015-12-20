@@ -20,8 +20,8 @@
 #include <string.h>
 
 //convert packed U0Y0V0Y1 U2Y2V2Y3 to SemiPlanar for display
-//void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse)
-void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w, int h, Bool reverse)
+void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse)
+//void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w, int h, Bool reverse)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y;
@@ -32,15 +32,15 @@ void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w,
 		dst_UV += ToIntMemPg(PMemPg)->offset_uv;
 
     struct yuv_pack in = {src, srcPitch};
-//    struct y_uv_planes out = {dst_Y, dst_UV, dstPitch};
-    struct y_uv_planes out = {dst_Y, dst_UV, w};
+    struct y_uv_planes out = {dst_Y, dst_UV, dstPitch};
+//    struct y_uv_planes out = {dst_Y, dst_UV, w};
     yuyv_semiplanar_neon (&out, &in, w, h);
 
 }
 //-----------------------------------------------------------------
 void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,
-		int srcPitch, int w, int h)
-//		int srcPitch, int dstPitch, int w, int h)
+//		int srcPitch, int w, int h)
+		int srcPitch, int dstPitch, int w, int h)
 {
 //	int i;
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
@@ -50,8 +50,8 @@ void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U,
 //		memcpy(dst_Y, src_Y, w*h);
 //	else{
 	struct y_copy inY = {dst_Y, src_Y, srcPitch};
-//		copy_neon (&inY, dstPitch, w, h);
-	copy_neon (&inY, w, w, h);
+	copy_neon (&inY, dstPitch, w, h);
+//	copy_neon (&inY, w, w, h);
 //	}
 		/*
 		for(i=0;i<h;i++){
@@ -60,8 +60,8 @@ void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U,
 			src_Y += w;
 		}
 */
-//    struct yuv_pack out = {dst_UV, dstPitch};
-    struct yuv_pack out = {dst_UV, w};
+    struct yuv_pack out = {dst_UV, dstPitch};
+//    struct yuv_pack out = {dst_UV, w};
     struct uv_planes in = {src_U, src_V, srcPitch>>1};
     interleave_chroma_neon (&out, &in, w, h);
 

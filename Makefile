@@ -46,5 +46,5 @@ clean:
 	${RM} ${TARGET_LIB} ${OBJS} $(DEP) ${INSTALL_DIR}${TARGET_LIB}
 
 .PHONY: install
-install:
+install: ${TARGET_LIB}
 	${CP} ${TARGET_LIB} ${INSTALL_DIR}

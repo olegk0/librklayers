@@ -113,7 +113,7 @@ void *OvlMapBufMem( OvlMemPgPtr PMemPg)
     return NULL;
 }
 //------------------------------------------------------------------
-unsigned long OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg)
+uint32_t OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg)
 {
 
     if(PMemPg)
@@ -131,7 +131,7 @@ uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg)
     	return 0;
 }
 //------------------------------------------------------------------
-OvlMemPgPtr OvlAllocMemPg( unsigned long size, unsigned long UV_offset)//except UI
+OvlMemPgPtr OvlAllocMemPg( uint32_t size, uint32_t UV_offset)//except UI
 {
     OvlMemPgPtr MemPg;
     struct usi_ump_mbs uum;

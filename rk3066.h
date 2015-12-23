@@ -62,12 +62,12 @@ enum {
 #define FB_MAXPGS_UI 1
 */
 
-#define PANEL_SIZE_X 1920
+#define MAX_PANEL_SIZE_X 1920
 //#define PANEL_SIZE_X 1280
-#define PANEL_SIZE_Y 1080
+#define MAX_PANEL_SIZE_Y 1080
 //#define PANEL_SIZE_Y 720
 
-#define FB_MAXPGSIZE PANEL_SIZE_X*PANEL_SIZE_Y*4
+#define FB_MAXPGSIZE MAX_PANEL_SIZE_X*MAX_PANEL_SIZE_Y*4
 
 #define RK_FBIOGET_PANEL_SIZE	0x5001
 #define RK_FBIOSET_YUV_ADDR	0x5002
@@ -82,14 +82,19 @@ enum {
 
 typedef struct
 {
-    int		poffset_x;	//Panel offset x
-    int		poffset_y;	//Panel offset y
-    int		ssize_w;	//Source img size width, 0-not change
-    int		ssize_h;	//Source img size height, 0-not change
-    int		scale_w;	//Scale size width, 0-not change
-    int		scale_h;	//Scale size height, 0-not change
+    uint32_t	poffset_x; //Panel offset x
+    uint32_t	poffset_y; //Panel offset y
+    uint32_t	ssize_w; //Source img size width, 0-not change
+    uint32_t	ssize_h; //Source img size height, 0-not change
+    uint32_t	scale_w; //Scale size width
+    uint32_t	scale_h; //Scale size height
 } SFbioDispSet;
 
+typedef struct
+{
+    uint32_t	size_x;
+    uint32_t	size_y;
+} SPanelSize;
 
 enum {
     RGBA_8888          = 1,

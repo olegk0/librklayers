@@ -101,7 +101,7 @@ void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void
 		int srcPitch, int dstPitch, int w, int h);
 void OvlCopyNV16SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
 		int srcPitch, int dstPitch, int w, int h);
-int OvlSetModeFb(OvlLayPg layout, unsigned short xres, unsigned short yres, OvlLayoutFormatType format);
+int OvlSetModeFb(OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayoutFormatType format);
 int OvlResetFB(OvlLayPg layout);
 int OvlCopyHWBufCF(uint32_t SrcYAddr, uint32_t SrcUVAddr, uint32_t SrcVAddr,
 				int SrcFrmt, int DstFrmt, uint32_t DstYAddr,
@@ -125,17 +125,17 @@ int OvlSetColorKey(uint32_t color);
 int OvlEnable(OvlLayPg layout, int enable);
 int OvlSetupBufDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int SrcPitch);
 int OvlSetupDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int Src_w, int Src_h);
-int OvlSetupFb(OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, unsigned short xres, unsigned short yres);
+int OvlSetupFb(OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, uint32_t xres, uint32_t yres);
 int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg);
 //------------------------------------------------------------
 int OvlClrMemPg(OvlMemPgPtr PMemPg);
-unsigned long OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg);
+uint32_t OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg);
 uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg);
 void * OvlMapBufMem(OvlMemPgPtr PMemPg);
 int OvlUnMapBufMem(OvlMemPgPtr PMemPg);
 OvlLayPg OvlAllocLay(OvlLayoutType type, OvlFbBufAllocType FbBufAlloc);
 void OvlFreeLay(OvlLayPg layout);
-OvlMemPgPtr OvlAllocMemPg(unsigned long size, unsigned long YUV_offset);
+OvlMemPgPtr OvlAllocMemPg(uint32_t size, uint32_t YUV_offset);
 int OvlFreeMemPg(OvlMemPgPtr PMemPg);
 
 #endif

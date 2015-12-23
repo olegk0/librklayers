@@ -138,7 +138,7 @@ int OvlSetHDMI(int xres,int yres)
     }
     */
 
-	fp = fopen(FB_SYS_HDMI"/mode", "w");
+/*	fp = fopen(FB_SYS_HDMI"/mode", "w");
 	if(fp){
 		fprintf(fp,HDMI_MODE_TMPL"\n",1280,720);//bug workarround
 		fclose(fp);
@@ -150,7 +150,9 @@ int OvlSetHDMI(int xres,int yres)
 		fclose(fp);
 	}
 		usleep(10000);
+*/
 	fp = fopen(FB_SYS_HDMI"/mode", "w");
+
 	if(fp){
 		fprintf(fp,HDMI_MODE_TMPL"\n", xres, yres);
 		fclose(fp);
@@ -273,6 +275,13 @@ int OvlGetBppByLay(OvlLayPg layout)
     case RGBA_5551:
     case RGBA_4444:
 		ret = 2;
+		break;
+    case YCbCr_422_SP:
+    case YCrCb_NV12_SP:
+    case YCrCb_444:
+    case YCbCr_422_P:
+    case YCrCb_NV12_P:
+		ret = 1;
 		break;
     default:
     	ret = 0;
@@ -458,25 +467,41 @@ int OvlClrMemPg(OvlMemPgPtr PMemPg)
 	return ovlclearbuf( ToIntMemPg(PMemPg));
 }
 //--------------------------------------------------------------------
-int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, OvlLayoutFormatType format)
+int ovlUpdatePanelSize(void)
+{
+	SPanelSize psize;
+	int ret;
+
+	ret = ioctl(Ovl_priv.OvlFb[UILayer].fd, RK_FBIOGET_PANEL_SIZE, &psize);
+	if(!ret){
+		Ovl_priv.Panel_w = psize.size_x;
+		Ovl_priv.Panel_h = psize.size_y;
+	}
+
+	return ret;
+}
+//-------------------------------------------------------------------
+int OvlSetModeFb( OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayoutFormatType format)
 {
     int ret=0;
 
-    if(LayValidAndNotUI(layout)){/*TODO !UIL*/
+    if(LayValidAndNotUI(layout)){
+    	memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
     	if((xres > Ovl_priv.OvlLay[layout].var.xres_virtual)||(yres > Ovl_priv.OvlLay[layout].var.yres_virtual)) return -EINVAL;
 //    if((xres > Ovl_priv.cur_var.xres)||(yres > Ovl_priv.cur_var.yres)) return -1;
     	if(format != RK_FORMAT_DEFAULT)
     		Ovl_priv.OvlLay[layout].var.nonstd = ovlToHWRkFormat(format);
     	if(xres>0){
     		Ovl_priv.OvlLay[layout].var.xres = xres;
-//    		Ovl_priv.OvlLay[layout].var.xres_virtual = xres;
     	}
+    	Ovl_priv.OvlLay[layout].var.xres_virtual = (Ovl_priv.OvlLay[layout].var.xres + 7) & ~7;
     	if(yres>0){
     		Ovl_priv.OvlLay[layout].var.yres = yres;
-//    		Ovl_priv.OvlLay[layout].var.yres_virtual = yres;
     	}
-    	ret = ioctl(FbByLay(layout)->fd, FBIOPUT_VSCREENINFO, &Ovl_priv.OvlLay[layout].var);
+    	Ovl_priv.OvlLay[layout].var.yres_virtual = Ovl_priv.OvlLay[layout].var.yres;
 
+    	ret = ioctl(FbByLay(layout)->fd, FBIOPUT_VSCREENINFO, &Ovl_priv.OvlLay[layout].var);
+//    	OVLDBG( "PanelW:%d PanelH:%d Xres:%d Yres:%d ret:%d", (Ovl_priv.OvlLay[layout].var.grayscale>>8) & 0xfff, (Ovl_priv.OvlLay[layout].var.grayscale>>20) & 0xfff, Ovl_priv.OvlLay[layout].var.xres, Ovl_priv.OvlLay[layout].var.yres, ret);
 /*    	if(ret == 0){
     		ovlSelHwMods( Ovl_priv.OvlLay[layout].var.nonstd, layout, DST_MODE);
 //    		Ovl_priv.OvlLay[layout].ResChange = FALSE;
@@ -484,7 +509,7 @@ int OvlSetModeFb( OvlLayPg layout, unsigned short xres, unsigned short yres, Ovl
         return ret;
     }
     else
-    	return -ENODEV;
+    	return -1;
 //    	ovlSelHwMods( Ovl_priv.cur_var.nonstd, layout, DST_MODE);
 
 }
@@ -493,14 +518,21 @@ static int ovlUpdVarOnChangeRes( OvlLayPg layout)
 {
 	if(LayValid(layout)){
 	    ioctl(Ovl_priv.OvlFb[UILayer].fd, FBIOGET_VSCREENINFO, &Ovl_priv.cur_var);
-		memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
+	    Ovl_priv.cur_var.vmode |= FB_VMODE_CONUPDATE;
+		Ovl_priv.cur_var.activate = FB_ACTIVATE_NOW;
+//		Ovl_priv.cur_var.grayscale = 0;
+
+		ovlUpdatePanelSize();
+		Ovl_priv.cur_var.grayscale = (Ovl_priv.Panel_w << 8) | (Ovl_priv.Panel_h << 20);
+
+//    	memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
 //	Ovl_priv.OvlLay[layout].ResChange = FALSE;
 		return 0;
     }else
-    	return -ENODEV;
+    	return -1;
 }
 //----------------------------------------------------------------------------------
-int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, unsigned short xres, unsigned short yres)
+int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, uint32_t xres, uint32_t yres)
 {
     int ret;
 
@@ -546,17 +578,17 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, in
 //    OvlFbPg FbPg;
 
     if(LayValidAndNotUI(layout)){
-
     	pt.poffset_x = Drw_x;
     	pt.poffset_y = Drw_y;
     	pt.ssize_w = Src_w;
-   		Ovl_priv.OvlLay[layout].var.xres_virtual = Src_w;
     	pt.ssize_h = Src_h;
-   		Ovl_priv.OvlLay[layout].var.yres_virtual = Src_h;
-//    pt.scale_w = (Src_w*PANEL_SIZE_X)/Drw_w;
-    	pt.scale_w = (Src_w*Ovl_priv.OvlLay[layout].var.xres)/Drw_w;
-//    pt.scale_h = (Src_h*PANEL_SIZE_Y)/Drw_h;
-    	pt.scale_h = (Src_h*Ovl_priv.OvlLay[layout].var.yres)/Drw_h;
+
+//    	pt.scale_w = (Src_w*Ovl_priv.OvlLay[layout].var.xres)/Drw_w;
+//    	pt.scale_h = (Src_h*Ovl_priv.OvlLay[layout].var.yres)/Drw_h;
+
+    	pt.scale_w = (Src_w*Ovl_priv.Panel_w)/Drw_w;
+    	pt.scale_h = (Src_h*Ovl_priv.Panel_h)/Drw_h;
+
     	ret = ioctl(FbByLay(layout)->fd, FBIOSET_DISP_PSET, &pt);
 //    OvlClearBuf( Ovl_priv.OvlFb[Ovl_priv.OvlLay[layout].OvlFb].OvlMemPg);
     }else
@@ -567,7 +599,7 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, in
 int ovlFbLinkMemPg( OvlFbPtr PFb, OvlMemPgPtr MemPg)
 {
     int ret;
-    unsigned long tmp[2];
+    uint32_t tmp[2];
 
     if(!PFb || ToIntFb(PFb)->Type == UIL)
     	return -EINVAL;
@@ -847,7 +879,8 @@ void OvlUpdFbMod(struct fb_var_screeninfo *var)
     Ovl_priv.cur_var.vmode |= FB_VMODE_CONUPDATE;
 	Ovl_priv.cur_var.activate = FB_ACTIVATE_NOW;
 	Ovl_priv.cur_var.grayscale = 0;
-
+//	Ovl_priv.cur_var.grayscale &= 0xff;
+//	Ovl_priv.cur_var.grayscale |= (var->xres << 8) | (var->yres << 20);
 // 	Ovl_priv.ResChange = TRUE;
    	OVLDBG("Resolution changed to %dx%d ***", Ovl_priv.cur_var.xres, Ovl_priv.cur_var.yres);
 

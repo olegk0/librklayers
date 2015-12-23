@@ -145,6 +145,9 @@ copy_neon:
 	add		WIDTH,	#31
 	bic		WIDTH, #31
 
+	bic		DPITCH, #3
+	bic		SPITCH, #3
+
 	sub		DPAD, DPITCH, WIDTH
 	sub		SPAD, SPITCH, WIDTH
 1:

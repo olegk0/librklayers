@@ -44,13 +44,15 @@
 #include <stdio.h>
 #include "chroma_neon.h"
 
+#define DEBUG 1
+
 #ifdef DEBUG
-#define OVLDBG(format, args...)		printf("RK_LAY(%s):" format "\n", __func__, ## args)
+#define OVLDBG(format, args...)		fprintf(stderr, "RK_LAY(%s):" format "\n", __func__, ## args)
 #else
 #define OVLDBG(format, args...)
 #endif
 
-#define ERRMSG(format, args...)		printf("RK_ERR(%s):"format "\n", __func__, ## args)
+#define ERRMSG(format, args...)		fprintf(stderr, "RK_ERR(%s):"format "\n", __func__, ## args)
 
 #define PAGE_MASK    (getpagesize() - 1)
 #define MFREE(p)	{free(p);p=NULL;}
@@ -63,8 +65,6 @@
 #define SRC_MODE TRUE
 #define DST_MODE FALSE
 */
-
-#define DEBUG 1
 
 enum {
 	UILayer=0,
@@ -113,8 +113,10 @@ typedef struct {
 	uint32_t		MaxPgSize;
 	struct fb_var_screeninfo	cur_var;
 //	struct fb_var_screeninfo	sav_var;
-	Bool			ResChange;
+//	Bool			ResChange;
 	int				OvlsCnt;
+	uint32_t		Panel_w;
+	uint32_t		Panel_h;
 #ifdef RGA_ENABLE
 	int				fd_RGA;
 	pthread_mutex_t	rgamutex;

@@ -20,6 +20,7 @@
 #include <string.h>
 
 //convert packed U0Y0V0Y1 U2Y2V2Y3 to SemiPlanar for display
+//YVYU and YUY2
 void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse)
 //void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w, int h, Bool reverse)
 {
@@ -38,6 +39,7 @@ void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int ds
 
 }
 //-----------------------------------------------------------------
+// YV12 and I420
 void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,
 //		int srcPitch, int w, int h)
 		int srcPitch, int dstPitch, int w, int h)

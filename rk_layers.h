@@ -124,7 +124,7 @@ int OvlFlipFb(OvlLayPg layout, OvlFbBufType flip, Bool clrPrev);
 int OvlSetColorKey(uint32_t color);
 int OvlEnable(OvlLayPg layout, int enable);
 int OvlSetupBufDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int SrcPitch);
-int OvlSetupDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int Src_w, int Src_h);
+int OvlSetupDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h);
 int OvlSetupFb(OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, uint32_t xres, uint32_t yres);
 int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg);
 //------------------------------------------------------------

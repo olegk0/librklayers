@@ -440,7 +440,13 @@ int OvlGetUIBpp()
 //--------------------------------------------------------------------------------
 int OvlSetColorKey( uint32_t color)
 {
-    return ioctl(Ovl_priv.OvlFb[UILayer].fd, FBIOSET_COLORKEY, &color);
+	struct color_key_cfg colorkeys;
+//    return ioctl(Ovl_priv.OvlFb[UILayer].fd, FBIOSET_COLORKEY, &color);
+	colorkeys.win0_color_key_cfg = color;
+	colorkeys.win1_color_key_cfg = color;
+	colorkeys.win2_color_key_cfg = color;
+	return ioctl(Ovl_priv.OvlFb[UILayer].fd, RK_FBIOPUT_COLOR_KEY_CFG, &colorkeys);
+
 }
 //------------------------------------------------------------------
 /*int OvlWaitSync( OvlLayPg layout)
@@ -486,11 +492,9 @@ int OvlSetModeFb( OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayoutFormat
     int ret=0;
 
     if(LayValidAndNotUI(layout)){
-    	memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
-    	if((xres > Ovl_priv.OvlLay[layout].var.xres_virtual)||(yres > Ovl_priv.OvlLay[layout].var.yres_virtual)) return -EINVAL;
 //    if((xres > Ovl_priv.cur_var.xres)||(yres > Ovl_priv.cur_var.yres)) return -1;
     	if(format != RK_FORMAT_DEFAULT)
-    		Ovl_priv.OvlLay[layout].var.nonstd = ovlToHWRkFormat(format);
+    		Ovl_priv.OvlLay[layout].var.nonstd = (Ovl_priv.OvlLay[layout].var.nonstd & ~0xff) | ovlToHWRkFormat(format);
     	if(xres>0){
     		Ovl_priv.OvlLay[layout].var.xres = xres;
     	}
@@ -520,12 +524,12 @@ static int ovlUpdVarOnChangeRes( OvlLayPg layout)
 	    ioctl(Ovl_priv.OvlFb[UILayer].fd, FBIOGET_VSCREENINFO, &Ovl_priv.cur_var);
 	    Ovl_priv.cur_var.vmode |= FB_VMODE_CONUPDATE;
 		Ovl_priv.cur_var.activate = FB_ACTIVATE_NOW;
-//		Ovl_priv.cur_var.grayscale = 0;
+		Ovl_priv.cur_var.grayscale = 0;
 
-		ovlUpdatePanelSize();
-		Ovl_priv.cur_var.grayscale = (Ovl_priv.Panel_w << 8) | (Ovl_priv.Panel_h << 20);
+//		ovlUpdatePanelSize();
+//		Ovl_priv.cur_var.grayscale = (Ovl_priv.Panel_w << 8) | (Ovl_priv.Panel_h << 20);
 
-//    	memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
+    	memcpy(&Ovl_priv.OvlLay[layout].var, &Ovl_priv.cur_var, sizeof(struct fb_var_screeninfo));
 //	Ovl_priv.OvlLay[layout].ResChange = FALSE;
 		return 0;
     }else
@@ -570,26 +574,16 @@ int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatTyp
 //    OvlClearBuf( Ovl_priv.OvlFb[Ovl_priv.OvlLay[layout].OvlFb].OvlMemPg);
 }*/
 //--------------------------------------------------------------------------------
-int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int Src_w, int Src_h)
+int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h)
 {
 
-    SFbioDispSet pt;
     int ret=0;
-//    OvlFbPg FbPg;
 
     if(LayValidAndNotUI(layout)){
-    	pt.poffset_x = Drw_x;
-    	pt.poffset_y = Drw_y;
-    	pt.ssize_w = Src_w;
-    	pt.ssize_h = Src_h;
-
-//    	pt.scale_w = (Src_w*Ovl_priv.OvlLay[layout].var.xres)/Drw_w;
-//    	pt.scale_h = (Src_h*Ovl_priv.OvlLay[layout].var.yres)/Drw_h;
-
-    	pt.scale_w = (Src_w*Ovl_priv.Panel_w)/Drw_w;
-    	pt.scale_h = (Src_h*Ovl_priv.Panel_h)/Drw_h;
-
-    	ret = ioctl(FbByLay(layout)->fd, FBIOSET_DISP_PSET, &pt);
+    	Ovl_priv.OvlLay[layout].var.grayscale = (Drw_w << 8) | (Drw_h << 20);
+    	Ovl_priv.OvlLay[layout].var.nonstd &= 0xff;
+    	Ovl_priv.OvlLay[layout].var.nonstd |= (Drw_x<<8) + (Drw_y<<20);
+    	OvlSetModeFb(layout, 0, 0, RK_FORMAT_DEFAULT);
 //    OvlClearBuf( Ovl_priv.OvlFb[Ovl_priv.OvlLay[layout].OvlFb].OvlMemPg);
     }else
     	ret = -ENODEV;

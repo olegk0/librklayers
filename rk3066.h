@@ -69,26 +69,20 @@ enum {
 
 #define FB_MAXPGSIZE MAX_PANEL_SIZE_X*MAX_PANEL_SIZE_Y*4
 
+#define RK_FBIOPUT_COLOR_KEY_CFG    0x4626
 #define RK_FBIOGET_PANEL_SIZE	0x5001
 #define RK_FBIOSET_YUV_ADDR	0x5002
-#define FBIOSET_COLORKEY	0x5010
-#define FBIOSET_DISP_PSET	0x5011
-
 
 #define RK_FBIOSET_OVERLAY_STATE   0x5018
 #define RK_FBIOSET_ENABLE          0x5019
 #define RK_FBIOGET_ENABLE          0x5020
 #define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
 
-typedef struct
-{
-    uint32_t	poffset_x; //Panel offset x
-    uint32_t	poffset_y; //Panel offset y
-    uint32_t	ssize_w; //Source img size width, 0-not change
-    uint32_t	ssize_h; //Source img size height, 0-not change
-    uint32_t	scale_w; //Scale size width
-    uint32_t	scale_h; //Scale size height
-} SFbioDispSet;
+struct color_key_cfg {
+	uint32_t win0_color_key_cfg;
+	uint32_t win1_color_key_cfg;
+	uint32_t win2_color_key_cfg;
+};
 
 typedef struct
 {

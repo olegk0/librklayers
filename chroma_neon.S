@@ -42,9 +42,9 @@
     .type	interleave_chroma_neon, %function
 interleave_chroma_neon:
     push		{r4-r6,lr}
+    vpush		{d0, d1}
     ldmia		r0,	{UV, DPITCH}
     ldmia		r1,	{U, V, SPITCH}
-    cmp		HEIGHT,	#0
 
     @	one UV block on two pixel by x
     mov		WIDTH,	WIDTH,	lsr #1
@@ -54,11 +54,14 @@ interleave_chroma_neon:
     add		WIDTH,	WIDTH, #7
     bic		WIDTH,	WIDTH, #7
 
+    cmp		HEIGHT,	#0
+    cmpgt	WIDTH,	#0
+	ble		3f
+
     sub		DPAD,	DPITCH,	WIDTH, lsl #1
     sub		SPAD,	SPITCH,	WIDTH
 1:
-    movsgt		COUNT,	WIDTH
-    pople		{r4-r6,pc}
+    mov		COUNT,	WIDTH
 2:
     pld		[U, #64]
 @	vld1.u8		{d0},		[U,:64]!
@@ -71,12 +74,14 @@ interleave_chroma_neon:
     subs		COUNT,	COUNT,	#8
     bgt		2b
 
-    subs		HEIGHT,	#1
+    subs	HEIGHT,	#1
     add		UV,	UV,	DPAD
     add		U,	U,	SPAD
     add		V,	V,	SPAD
-    b		1b
-
+    bgt		1b
+3:
+	vpop	{d0, d1}
+    pop		{r4-r6,pc}
 @*************************************************************************
 #define Y	r0
 #define COUNT	r1
@@ -93,14 +98,17 @@ interleave_chroma_neon:
     .type	yuyv_semiplanar_neon, %function
 yuyv_semiplanar_neon:
     push		{r4-r6,lr}
+    vpush		{d0, d1}
     ldmia		r0,	{Y, UV2, DPITCH2}
     ldmia		r1,	{S, SPITCH}
     cmp		HEIGHT,	#0
+    cmpgt	WIDTH,	#0
+	ble		3f
+
     sub		DPAD2,	DPITCH2,WIDTH
     sub		SPAD,	SPITCH,	WIDTH,	lsl #1
 1:
-    movsgt		COUNT,	WIDTH
-    pople		{r4-r6,pc}
+    mov		COUNT,	WIDTH
 2:
     pld		[S, #64]
     subs		COUNT,	COUNT,	#8
@@ -111,11 +119,14 @@ yuyv_semiplanar_neon:
     vst1.u8		{d1},		[UV2]! @ 8
     bgt		2b
 
-    subs		HEIGHT,	#1
+    subs	HEIGHT,	#1
     add		S,	S,	SPAD
     add		Y,	Y,	DPAD2
     add		UV2,	UV2,	DPAD2@,	lsr #1
-    b		1b
+    bgt		1b
+3:
+	vpop	{d0, d1}
+    pop		{r4-r6,pc}
 
 @*************************************************************************
 #define dY		r0

@@ -78,7 +78,7 @@ typedef void *OvlFbPtr;
 
 typedef void *OvlLayPtr;
 
-int Open_RkLayers(Bool MasterMode);
+int Open_RkLayers(void);
 void Close_RkLayers(void);
 void OvlUpdFbMod(struct fb_var_screeninfo *var);
 int OvlInitMainFB(const char *dev_name, int depth);
@@ -122,7 +122,7 @@ int OvlFlipFb(OvlLayPg layout, OvlFbBufType flip, Bool clrPrev);
 //int Ovl2dBlt(uint32_t *src_bits, uint32_t *dst_bits, int src_stride, int dst_stride, int src_bpp, int dst_bpp, int src_x, int src_y, int dst_x, int dst_y, int w, int h);
 //-------------------------------------------------------------
 int OvlSetColorKey(uint32_t color);
-int OvlEnable(OvlLayPg layout, int enable);
+int OvlEnable( OvlLayPg layout, int enable, int vsync_en);
 int OvlSetupBufDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int SrcPitch);
 int OvlSetupDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h);
 int OvlSetupFb(OvlLayPg layout, OvlLayoutFormatType SrcFrmt, OvlLayoutFormatType DstFrmt, uint32_t xres, uint32_t yres);

@@ -1,3 +1,4 @@
+DEBUG ?=y
 
 ENABLE_RGA ?=n
 ENABLE_IPP ?=n
@@ -12,13 +13,19 @@ DEFINES += -DRGA_ENABLE
 SRCS += rga_func.c
 endif
 
+ifeq ($(DEBUG),y)
+DEFINES += -DDEBUG
+endif
+
 INCLUDES = -I./include
 CFLAGS = -fPIC -Wall -Wextra -O2 -g $(INCLUDES) $(DEFINES)
-LDFLAGS = -shared -lUMP -lpthread
+LDFLAGS = -shared -lUMP -lpthread -lrt
 
 INSTALL_DIR = /usr/lib/
 TARGET_LIB = librklayers.so
 SRCS += rk_layers.c rk_video.c rk_memfunc.c chroma_neon.S
+
+DEFINES += -DLIBNAME=$(TARGET_LIB)
 
 OBJS = $(addsuffix .o,$(basename $(SRCS)))
 DEP = $(addsuffix .d,$(basename $(SRC)))

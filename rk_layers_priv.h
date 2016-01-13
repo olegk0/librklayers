@@ -29,6 +29,8 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+//#include <pthread.h>
+#include <semaphore.h>
 
 #include "rk_layers.h"
 #ifdef IPP_ENABLE
@@ -44,7 +46,7 @@
 #include <stdio.h>
 #include "chroma_neon.h"
 
-#define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
 #define OVLDBG(format, args...)		fprintf(stderr, "RK_LAY(%s):" format "\n", __func__, ## args)
@@ -71,6 +73,12 @@ enum {
 	Ovl1Layer=1,
 	Ovl2Layer=2,
 };
+
+typedef struct
+{
+	int ucount;
+	int lay_used[MAX_OVERLAYs];
+} SHMdt;
 
 typedef struct {
 	ump_secure_id	ump_fb_secure_id;
@@ -117,6 +125,9 @@ typedef struct {
 	int				OvlsCnt;
 	uint32_t		Panel_w;
 	uint32_t		Panel_h;
+	int				SHM_fd;
+	SHMdt			*SHM_mem;
+	sem_t			*SEM_t;
 #ifdef RGA_ENABLE
 	int				fd_RGA;
 	pthread_mutex_t	rgamutex;
@@ -127,18 +138,23 @@ typedef struct {
 #endif
 } OvlHWRec, *OvlHWPtr;
 
+#define STR_VAL(val)      #val
+#define TO_NAME(str) STR_VAL(str)
+#define SHM_NAME TO_NAME(LIBNAME) "_shm"
+#define SEM_NAME "/" TO_NAME(LIBNAME) "_sem"
+
 #define ToIntMemPg(mpg)	((ovlMemPgPtr)mpg)
 #define ToIntFb(fb)	((ovlFbPtr)fb)
-#define FbByLay(layout) (Ovl_priv.OvlLay[layout].OvlFb)
+#define FbByLay(layout) (pOvl_priv->OvlLay[layout].OvlFb)
 #define MBufByLay(layout) (FbByLay(layout)->CurMemPg)
 
 #define LayIsUIfb(layout)	(FbByLay(layout)->Type == UIL)
-#define LayValid(lay) (lay < Ovl_priv.OvlsCnt && lay >= 0)
+#define LayValid(lay) (lay < pOvl_priv->OvlsCnt && lay >= 0)
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))
 
 #define MemPgIsUI(mpg)	(ToIntMemPg(mpg)->MemPgType == UIFB_MEM)
 
-extern OvlHWRec Ovl_priv;
+extern OvlHWPtr pOvl_priv;
 
 ovlMemPgPtr ovlInitMemPgDef();
 int ovlInitUSIHW();

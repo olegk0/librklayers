@@ -148,7 +148,9 @@ typedef struct {
 #define FbByLay(layout) (pOvl_priv->OvlLay[layout].OvlFb)
 #define MBufByLay(layout) (FbByLay(layout)->CurMemPg)
 
-#define LayIsUIfb(layout)	(FbByLay(layout)->Type == UIL)
+//#define LayIsUIfb(layout)	(FbByLay(layout)->Type == UIL)
+#define LayIsUIfb(layout)	(layout == UILayer)
+
 #define LayValid(lay) (lay < pOvl_priv->OvlsCnt && lay >= 0)
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))
 

@@ -28,6 +28,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 //#include <pthread.h>
 #include <semaphore.h>
@@ -148,8 +149,7 @@ typedef struct {
 #define FbByLay(layout) (pOvl_priv->OvlLay[layout].OvlFb)
 #define MBufByLay(layout) (FbByLay(layout)->CurMemPg)
 
-//#define LayIsUIfb(layout)	(FbByLay(layout)->Type == UIL)
-#define LayIsUIfb(layout)	(layout == UILayer)
+#define LayIsUIfb(layout)	(pOvl_priv->OvlFb[layout].Type == UIL)
 
 #define LayValid(lay) (lay < pOvl_priv->OvlsCnt && lay >= 0)
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))

@@ -262,7 +262,7 @@ int OvlGetBppByLay(OvlLayPg layout)
 	if(!LayValid(layout))
 		return -1;
 
-    switch(pOvl_priv->OvlLay[layout].var.nonstd) {
+    switch(pOvl_priv->OvlLay[layout].var.nonstd & 0xff) {
     case RGBA_8888:
     case RGBX_8888:
     case BGRA_8888:
@@ -424,7 +424,7 @@ int OvlGetUIBpp()
 {
     int ret;
 
-    switch(pOvl_priv->cur_var.nonstd){
+    switch(pOvl_priv->cur_var.nonstd & 0xff){
     case RGB_565:
     	ret = 16;
     	break;
@@ -463,8 +463,8 @@ int ovlclearbuf( ovlMemPgPtr PMemPg)
 {
     if(PMemPg == NULL || PMemPg->fb_mmap == NULL || MemPgIsUI(PMemPg))
     	return -ENODEV;
-//	memset(PMemPg->fb_mmap,0,PMemPg->buf_size);
-	memset_neon (PMemPg->fb_mmap,0,PMemPg->buf_size);
+	memset(PMemPg->fb_mmap,0,PMemPg->buf_size);
+//	memset_neon (PMemPg->fb_mmap,0,PMemPg->buf_size);
 	return 0;
 }
 //--------------------------------------------------------------------------------
@@ -487,6 +487,11 @@ int ovlUpdatePanelSize(void)
 	return ret;
 }
 //-------------------------------------------------------------------
+uint32_t OvlVresByXres(uint32_t xres)
+{
+	 return (xres+ 7) & ~7;//round up
+}
+//-------------------------------------------------------------------
 int OvlSetModeFb( OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayoutFormatType format)
 {
     int ret=0;
@@ -498,7 +503,7 @@ int OvlSetModeFb( OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayoutFormat
     	if(xres>0){
     		pOvl_priv->OvlLay[layout].var.xres = xres;
     	}
-    	pOvl_priv->OvlLay[layout].var.xres_virtual = (pOvl_priv->OvlLay[layout].var.xres + 7) & ~7;
+    	pOvl_priv->OvlLay[layout].var.xres_virtual = OvlVresByXres(pOvl_priv->OvlLay[layout].var.xres);
     	if(yres>0){
     		pOvl_priv->OvlLay[layout].var.yres = yres;
     	}
@@ -642,13 +647,14 @@ int OvlFlipFb( OvlLayPg layout, OvlFbBufType flip, Bool clrPrev)
 //---------------------------------------------------------------------
 int OvlEnable( OvlLayPg layout, int enable, int vsync_en)
 {
-	OVLDBG("layout:%d en:%d vsync:%d", layout, enable, vsync_en);
+	int ret;
     if(LayValidAndNotUI(layout)){
 		ioctl(FbByLay(layout)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
-    	return ioctl(FbByLay(layout)->fd, RK_FBIOSET_ENABLE, &enable);
+    	ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_ENABLE, &enable);
     }
     else
-    	return -ENODEV;
+    	ret = -ENODEV;
+    OVLDBG("layout:%d en:%d vsync:%d ret:%d", layout, enable, vsync_en, ret);
 }
 //---------------------------------------------------------------------
 int ovlIsUsedNM( OvlLayPg layout)
@@ -959,17 +965,19 @@ void set_ovl_param(Bool MasterMode)
     	pOvl_priv->OvlLay[i].FbBufUsed = FRONT_FB;
     	pOvl_priv->OvlLay[i].FbMemPgs[FRONT_FB] = NULL;
     	pOvl_priv->OvlLay[i].FbMemPgs[BACK_FB] = NULL;
+    	if(i>0){
+        	pOvl_priv->OvlFb[i].Type = SCALEL;//        UIL=0,    SCALEL=1,    NotSCALEL=2, TODO HWRGALayer
+//    		OvlSetModeFb(i,0,0,0);
+    	}else
+        	pOvl_priv->OvlFb[i].Type = UIL;
+
     	if(MasterMode){
     		OvlEnable( i, 0, 1);
     		ovlSetUsedNM( i, 0);
     	}else{
     		ovlIsUsedNM(i);
     	}
-    	if(i>0){
-        	pOvl_priv->OvlFb[i].Type = SCALEL;//        UIL=0,    SCALEL=1,    NotSCALEL=2, TODO HWRGALayer
-//    		OvlSetModeFb(i,0,0,0);
-    	}else
-        	pOvl_priv->OvlFb[i].Type = UIL;
+
     }
 
 }
@@ -1099,7 +1107,7 @@ err:
 //----------------------------main init--------------------------
 int Open_RkLayers(void)
 {
-	int ret, i, tmp=1;
+	int ret=0, i;//, tmp=1;
 
 	OVLDBG("");
 
@@ -1129,6 +1137,7 @@ int Open_RkLayers(void)
     	if ( (pOvl_priv->SEM_t = sem_open(SEM_NAME, 0)) == SEM_FAILED ) {
     		ERRMSG("Error sem_open:%d",errno);
     		umask(old_umask);
+    		ret = -ENOENT;
     		goto err;
     	}else{
     		OVLDBG( "Semaphore re-open");
@@ -1143,7 +1152,7 @@ int Open_RkLayers(void)
     	goto err;
     }
 
-    tmp = ret;
+//    tmp = ret;
 
 #ifdef IPP_ENABLE
     OVLDBG( "HW:Initialize IPP");
@@ -1163,13 +1172,13 @@ int Open_RkLayers(void)
 #endif
 
     OVLDBG( "HW:Initialize USI");
-    if(tmp)
+/*    if(tmp)
     if (!LoadKernelModule("rk_ump")){
     	ERRMSG("can't load usi_ump kernel module");
     	ret = -ENODEV;
     	goto err;
     }
-
+*/
     pOvl_priv->fd_USI = ovlInitUSIHW();
     if(pOvl_priv->fd_USI <= 0){
     	ERRMSG( "HW:Error USI");
@@ -1200,9 +1209,10 @@ void Close_RkLayers()
 #endif
 
     	for(i = 0;i < pOvl_priv->OvlsCnt;i++){
-    		OvlFreeLay(i);
-    		if(pOvl_priv->OvlFb[i].fd > 0)
+    		if(pOvl_priv->OvlFb[i].fd > 0){
+    			OvlFreeLay(i);
     			close(pOvl_priv->OvlFb[i].fd);
+    		}
     	}
 
     	if(pOvl_priv->fd_USI > 0)
@@ -1210,7 +1220,7 @@ void Close_RkLayers()
 
     	ump_close();
 
-    	if(pOvl_priv->SEM_t > 0){
+    	if(pOvl_priv->SEM_t != SEM_FAILED){
     		i=1;
     		sem_wait(pOvl_priv->SEM_t);
     		if(pOvl_priv->SHM_fd > 0){

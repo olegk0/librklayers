@@ -67,6 +67,7 @@ void interleave_chroma_neon (struct yuv_pack *const out,
                                const struct uv_planes *const in,
                                int width, int height) asm("interleave_chroma_neon");
 
+// 3 byte align
 void copy_neon (struct y_copy *const in, int d_pitch,
 		             int width, int height) asm("copy_neon");
 

@@ -21,8 +21,7 @@
 
 //convert packed U0Y0V0Y1 U2Y2V2Y3 to SemiPlanar for display
 //YVYU and YUY2
-void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int dstPitch, int w, int h, Bool reverse)
-//void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int w, int h, Bool reverse)
+void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int srcPitch, int w, int h, Bool reverse)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y;
@@ -41,19 +40,23 @@ void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int srcPitch, int ds
 //-----------------------------------------------------------------
 // YV12 and I420
 void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,
-//		int srcPitch, int w, int h)
-		int srcPitch, int dstPitch, int w, int h)
+		int dstPitch, int srcPitch_y, int srcPitch_c, int w, int h)
 {
-//	int i;
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_uv;
+	int i;
 
-//	if(dstPitch == w)
-//		memcpy(dst_Y, src_Y, w*h);
-//	else{
-	struct y_copy inY = {dst_Y, src_Y, srcPitch};
-	copy_neon (&inY, dstPitch, w, h);
-//	copy_neon (&inY, w, w, h);
+	if((dstPitch | srcPitch_y) & 3){
+		for(i=0;i<h;i++){
+			memcpy(dst_Y, src_Y, w);
+			dst_Y += dstPitch;
+			src_Y += srcPitch_y;
+		}
+	}else{
+		struct y_copy inY = {dst_Y, src_Y, srcPitch_y};
+		copy_neon (&inY, dstPitch, w, h);
+	}
+
 //	}
 		/*
 		for(i=0;i<h;i++){
@@ -64,13 +67,13 @@ void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U,
 */
     struct yuv_pack out = {dst_UV, dstPitch};
 //    struct yuv_pack out = {dst_UV, w};
-    struct uv_planes in = {src_U, src_V, srcPitch>>1};
+    struct uv_planes in = {src_U, src_V, srcPitch_c};
     interleave_chroma_neon (&out, &in, w, h);
 
 }
 
 void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
-		int srcPitch, int dstPitch, int w, int h)
+		int dstPitch, int srcPitch, int w, int h)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_uv;
@@ -86,7 +89,7 @@ void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void
 }
 
 void OvlCopyNV16SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
-		int srcPitch, int dstPitch, int w, int h)
+		int dstPitch, int srcPitch, int w, int h)
 {
 	void *dst_Y = ToIntMemPg(PMemPg)->fb_mmap;
 	void *dst_UV = dst_Y + ToIntMemPg(PMemPg)->offset_uv;

@@ -42,7 +42,7 @@
     .type	interleave_chroma_neon, %function
 interleave_chroma_neon:
     push		{r4-r6,lr}
-    vpush		{d0, d1}
+    vpush		{d16, d17}
     ldmia		r0,	{UV, DPITCH}
     ldmia		r1,	{U, V, SPITCH}
 
@@ -65,12 +65,12 @@ interleave_chroma_neon:
 2:
     pld		[U, #64]
 @	vld1.u8		{d0},		[U,:64]!
-    vld1.u8		{d0},		[U]!
+    vld1.u8		{d16},		[U]!
     pld		[V, #64]
 @	vld1.u8		{d1},		[V,:64]!
-    vld1.u8		{d1},		[V]!
+    vld1.u8		{d17},		[V]!
 @	vst2.u8		{d0, d1},	[UV,:128]!
-    vst2.u8		{d0, d1},	[UV]!
+    vst2.u8		{d16, d17},	[UV]!
     subs		COUNT,	COUNT,	#8
     bgt		2b
 
@@ -80,7 +80,7 @@ interleave_chroma_neon:
     add		V,	V,	SPAD
     bgt		1b
 3:
-	vpop	{d0, d1}
+	vpop	{d16, d17}
     pop		{r4-r6,pc}
 @*************************************************************************
 #define Y	r0
@@ -98,7 +98,7 @@ interleave_chroma_neon:
     .type	yuyv_semiplanar_neon, %function
 yuyv_semiplanar_neon:
     push		{r4-r6,lr}
-    vpush		{d0, d1}
+    vpush		{d16, d17}
     ldmia		r0,	{Y, UV2, DPITCH2}
     ldmia		r1,	{S, SPITCH}
     cmp		HEIGHT,	#0
@@ -113,10 +113,10 @@ yuyv_semiplanar_neon:
     pld		[S, #64]
     subs		COUNT,	COUNT,	#8
     @ YUYV => d0:YY + d1:UV
-    vld2.u8		{d0, d1},	[S]! @ 16
+    vld2.u8		{d16, d17},	[S]! @ 16
 @	vld1.u8		{q0-q1},	[S,:128]!
-    vst1.u8		{d0},		[Y]! @ 8
-    vst1.u8		{d1},		[UV2]! @ 8
+    vst1.u8		{d16},		[Y]! @ 8
+    vst1.u8		{d17},		[UV2]! @ 8
     bgt		2b
 
     subs	HEIGHT,	#1
@@ -125,7 +125,7 @@ yuyv_semiplanar_neon:
     add		UV2,	UV2,	DPAD2@,	lsr #1
     bgt		1b
 3:
-	vpop	{d0, d1}
+	vpop	{d16, d17}
     pop		{r4-r6,pc}
 
 @*************************************************************************
@@ -144,7 +144,7 @@ yuyv_semiplanar_neon:
     .type	copy_neon, %function
 copy_neon:
     push		{r4-r7,lr}
-    vpush		{d0-d3}
+    vpush		{d16-d19}
     ldmia		r0,	{dY, sY, SPITCH}
     cmp		HEIGHT,	#2
     ble		3f
@@ -171,8 +171,8 @@ copy_neon:
 @    subs		COUNT,	COUNT,	#8
 @    vld2.u8		{d0},	[sY]!
 @    vst1.u8		{d0},	[dY]!
-	vldm	sY!,{d0-d3}
-	vstm	dY!,{d0-d3}
+	vldm	sY!,{d16-d19}
+	vstm	dY!,{d16-d19}
 	subs	CNT,	#32
     bgt		2b
 
@@ -187,7 +187,7 @@ copy_neon:
 	subs	BWIDTH, #4
 	bgt		4b
 3:
-	vpop	{d0-d3}
+	vpop	{d16-d19}
     pop		{r4-r7,pc}
 
 @*************************************************************************
@@ -199,22 +199,22 @@ copy_neon:
     .type	memset_neon, %function
 memset_neon:
     push		{lr}
-    vpush		{d0-d3}
+    vpush		{d16-d19}
 @	round down
     bics	SIZE, #31
     beq		3f
 
-	vdup.8	d0, FILL
-	vmov	d1, d0
-	vmov	d2, d0
-	vmov	d3, d0
+	vdup.8	d16, FILL
+	vmov	d17, d0
+	vmov	d18, d0
+	vmov	d19, d0
 
 2:
-    pld		[DST, #128]@???
-	vstm	DST!,{d0-d3}
+//    pld		[DST, #128]@???
+	vstm	DST!,{d16-d19}
 	subs	SIZE,	#32
     bgt		2b
 
 3:
-	vpop	{d0-d3}
+	vpop	{d16-d19}
     pop		{pc}

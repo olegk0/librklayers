@@ -140,7 +140,7 @@ OvlMemPgPtr OvlAllocMemPg( uint32_t size, uint32_t UV_offset)//except UI
 
     MemPg = ovlInitMemPgDef();
     if(MemPg){
-    	uum.size = size;
+    	uum.size = size + UMP_MINIMUM_SIZE * 10; //~40kb save buf
     	ret = ovlUSIAllocMem( &uum);
     	if(!ret){
     		ToIntMemPg(MemPg)->buf_size = uum.size;

@@ -19,7 +19,7 @@ endif
 
 INCLUDES = -I./include
 CFLAGS = -fPIC -Wall -Wextra -O2 -g $(INCLUDES) $(DEFINES)
-LDFLAGS = -shared -lUMP -lpthread -lrt
+LDFLAGS = -shared -lUMP -lpthread
 
 INSTALL_DIR = /usr/lib/
 TARGET_LIB = librklayers.so

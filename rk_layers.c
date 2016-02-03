@@ -655,64 +655,41 @@ int OvlEnable( OvlLayPg layout, int enable, int vsync_en)
     else
     	ret = -ENODEV;
     OVLDBG("layout:%d en:%d vsync:%d ret:%d", layout, enable, vsync_en, ret);
-}
-//---------------------------------------------------------------------
-int ovlIsUsedNM( OvlLayPg layout)
-{
-	int used;
 
-//for extern func    if(LayValidAndNotUI(layout))
-    used = pOvl_priv->SHM_mem->lay_used[layout];
-
-    OVLDBG("layout:%d used:%d", layout, used);
-    if(!used)
-    	OvlEnable(layout, 0, 1); // workaround layer activation when opening
-
-    return used;
-
-}
-//---------------------------------------------------------------------
-int ovlIsUsed( OvlLayPg layout)
-{
-	int used;
-
-//for extern func    if(LayValidAndNotUI(layout))
-	sem_wait(pOvl_priv->SEM_t);
-    used = ovlIsUsedNM(layout);
-    sem_post(pOvl_priv->SEM_t);
-    return used;
-
+    return ret;
 }
 //---------------------------------------------------------------------
 int ovlIsUsedAlloc( OvlLayPg layout)
 {
+	int ret, used=0;
+
+	ret = ovlUSIAllocRes(layout);
+	if(ret < 0)//if it is already in use
+		used = 1;
+
+    OVLDBG("layout:%d used:%d ret:%d", layout, used, ret);
+
+    return used;
+}
+//---------------------------------------------------------------------
+int ovlIsUsedCheck( OvlLayPg layout)
+{
 	int used;
 
-//for extern func    if(LayValidAndNotUI(layout))
-	sem_wait(pOvl_priv->SEM_t);
-    used = pOvl_priv->SHM_mem->lay_used[layout];
+	used = ovlIsUsedAlloc(layout);
 
-    OVLDBG("layout:%d used:%d", layout, used);
     if(!used){
-//    	OvlEnable(layout, 0, 1); // workaround layer activation when opening
-    	pOvl_priv->SHM_mem->lay_used[layout] = 1;
+    	OvlEnable(layout, 0, 1); // workaround layer activation when opening
+    	ovlUSIFreeRes(layout);
     }
 
-    sem_post(pOvl_priv->SEM_t);
     return used;
 
 }
 //---------------------------------------------------------------------
-void ovlSetUsedNM( OvlLayPg layout, int used)
+int ovlFreeUse( OvlLayPg layout)
 {
-    pOvl_priv->SHM_mem->lay_used[layout] = used;
-}
-//---------------------------------------------------------------------
-void ovlSetUsed( OvlLayPg layout, int used)
-{
-	sem_wait(pOvl_priv->SEM_t);
-	ovlSetUsedNM( layout, used);
-    sem_post(pOvl_priv->SEM_t);
+	return ovlUSIFreeRes(layout);
 }
 //---------------------------------------------------------------------
 int OvlResetFB( OvlLayPg layout)
@@ -776,6 +753,7 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     	for(lay=0;lay < pOvl_priv->OvlsCnt;lay++){
     		if(FbByLay(lay)->Type != UIL)
     			if(!pOvl_priv->OvlLay[lay].InUse && !ovlIsUsedAlloc(lay)){
+    				break;
     			}
     	}
     	break;
@@ -822,14 +800,15 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     }else
     	goto err1;
 err:
-	ovlSetUsed( lay, 0);
+	ovlFreeUse(lay);
 err1:
 	return ERRORL;
 
 }
 //------------------------------------------------------------------
-void OvlFreeLay( OvlLayPg layout)
+int OvlFreeLay( OvlLayPg layout)
 {
+	int ret=0;
 
     if(LayValid(layout)){
     	if(pOvl_priv->OvlLay[layout].InUse){
@@ -841,9 +820,13 @@ void OvlFreeLay( OvlLayPg layout)
     		OvlEnable( layout, 0, 1);
     		pOvl_priv->OvlLay[layout].InUse = FALSE;
     		pOvl_priv->OvlLay[layout].ReqType = ERRORL;
-    		ovlSetUsed( layout, 0);
-    	}
-    }
+    		ovlFreeUse(layout);
+    	}else
+        	ret = -ENODEV;
+    }else
+    	ret = -EINVAL;
+
+    return ret;
 }
 //------------------------------------------------------------------
 /*ump_secure_id ovlGetUmpId( OvlMemPg pg)
@@ -971,12 +954,12 @@ void set_ovl_param(Bool MasterMode)
     	}else
         	pOvl_priv->OvlFb[i].Type = UIL;
 
-    	if(MasterMode){
+/*    	if(MasterMode){
     		OvlEnable( i, 0, 1);
-    		ovlSetUsedNM( i, 0);
-    	}else{
-    		ovlIsUsedNM(i);
     	}
+    	else{*/
+    		ovlIsUsedCheck(i);// deactivate nonused layers
+//    	}
 
     }
 
@@ -1032,80 +1015,30 @@ err:
     return ret;
 }
 //-------------------------------------------------------
-int ovl_init_ovl()
+int ovl_init_ovl(Bool MasterMode)
 {
-    int ret, shme=0, i;
+    int ret;
 
     ret = ovl_setup_ovl();
     if(ret) goto err;
-
-    sem_wait(pOvl_priv->SEM_t);
-
-    mode_t old_umask = umask(0);
-    if((pOvl_priv->SHM_fd = shm_open( SHM_NAME, O_CREAT | O_RDWR |  O_EXCL, 0666)) < 0 ) {
-    	OVLDBG("SHM exist");
-    	shme = 1;
-    	if((pOvl_priv->SHM_fd = shm_open( SHM_NAME, O_RDWR, 0666)) < 0 ) {
-    		ERRMSG("Cannot open SHM");
-    		ret = -1;
-    		umask(old_umask);
-    		goto err_mu;
-    	}
-    }
-    umask(old_umask);
-    if(!shme){
-    	if (ftruncate(pOvl_priv->SHM_fd, sizeof(SHMdt)+1) < 0 ) {
-    		ERRMSG("ftruncate SHM");
-            ret = -1;
-            goto err_mu1;
-        }
-    }
-
-    pOvl_priv->SHM_mem = mmap(0, sizeof(SHMdt), PROT_WRITE | PROT_READ, MAP_SHARED, pOvl_priv->SHM_fd, 0);
-    if ( pOvl_priv->SHM_mem == MAP_FAILED ) {
-    	ERRMSG("mmap SHM");
-		ret = -1;
-		pOvl_priv->SHM_mem = NULL;
-		goto err_mu1;
-    }
-
-    if(shme)//not first run
-    	if(!pOvl_priv->SHM_mem->ucount) // == 0
-    		shme = 0;
-
-    OVLDBG("SHM ucount:%d shme:%d", pOvl_priv->SHM_mem->ucount, shme);
-    if(shme){
-    	pOvl_priv->SHM_mem->ucount++;
-    }else{//init
-    	pOvl_priv->SHM_mem->ucount = 1;
-    	for(i=0;i<MAX_OVERLAYs;i++)
-    		pOvl_priv->SHM_mem->lay_used[i] = 0;
-    }
-    shme = !shme;
-    set_ovl_param(shme);
-
-    sem_post(pOvl_priv->SEM_t);
-
+    set_ovl_param(MasterMode);
 
 #ifdef RGA_ENABLE
-    pthread_mutex_init(&pOvl_priv->rgamutex, NULL);
+    pthread_mutex_init(&Ovl_priv.rgamutex, NULL);
 #endif
 #ifdef IPP_ENABLE
-    pthread_mutex_init(&pOvl_priv->ippmutex, NULL);
+    pthread_mutex_init(&Ovl_priv.ippmutex, NULL);
 #endif
+//    OvlReset();//TODO
 
-    return shme;
-err_mu1:
-	close(pOvl_priv->SHM_fd);
-	shm_unlink(SHM_NAME);
-err_mu:
-	sem_post(pOvl_priv->SEM_t);
+    return 0;
+
 err:
     return ret;
 }
 
 //----------------------------main init--------------------------
-int Open_RkLayers(void)
+int Open_RkLayers(Bool MasterMode)
 {
 	int ret=0, i;//, tmp=1;
 
@@ -1123,30 +1056,17 @@ int Open_RkLayers(void)
     	return -ENODEV;
     }
 
-    mode_t old_umask = umask(0);
-//	OVLDBG( "Semaphore %s try open",SEM_NAME);
-    if ( (pOvl_priv->SEM_t = sem_open(SEM_NAME, O_CREAT |  O_EXCL, 0666, 1)) == SEM_FAILED ) {
-    	OVLDBG( "Semaphore exist:%d",errno);
-//    	tmp=0;
-/*    	if(sem_unlink(SEM_NAME) < 0){
-    		OVLDBG( "Semaphore is not deleted");
-    	}else{
-    		OVLDBG( "Semaphore deleted");
-    	}
-    	if ( (pOvl_priv->SEM_t = sem_open(SEM_NAME, O_CREAT, 0666, 1)) == SEM_FAILED ) {*/
-    	if ( (pOvl_priv->SEM_t = sem_open(SEM_NAME, 0)) == SEM_FAILED ) {
-    		ERRMSG("Error sem_open:%d",errno);
-    		umask(old_umask);
-    		ret = -ENOENT;
-    		goto err;
-    	}else{
-    		OVLDBG( "Semaphore re-open");
-    	}
+    pOvl_priv->fd_USI = ovlInitUSIHW();
+    if(pOvl_priv->fd_USI <= 0){
+    	ERRMSG( "HW:Error USI");
+    	ump_close();
+    	MFREE(pOvl_priv);
+    	return -ENODEV;
     }
-    umask(old_umask);
+
     OVLDBG( "HW:Initialize overlays");
 
-    ret = ovl_init_ovl();
+    ret = ovl_init_ovl(MasterMode);
     if(ret< 0){
     	ERRMSG( "HW:Error overlays");
     	goto err;
@@ -1179,12 +1099,7 @@ int Open_RkLayers(void)
     	goto err;
     }
 */
-    pOvl_priv->fd_USI = ovlInitUSIHW();
-    if(pOvl_priv->fd_USI <= 0){
-    	ERRMSG( "HW:Error USI");
-    	ret = -ENODEV;
-    	goto err;
-    }
+
 
     return 0;
 err:
@@ -1210,7 +1125,8 @@ void Close_RkLayers()
 
     	for(i = 0;i < pOvl_priv->OvlsCnt;i++){
     		if(pOvl_priv->OvlFb[i].fd > 0){
-    			OvlFreeLay(i);
+    			if(OvlFreeLay(i))
+    				ovlIsUsedCheck(i);// deactivate nonused layers
     			close(pOvl_priv->OvlFb[i].fd);
     		}
     	}
@@ -1220,30 +1136,6 @@ void Close_RkLayers()
 
     	ump_close();
 
-    	if(pOvl_priv->SEM_t != SEM_FAILED){
-    		i=1;
-    		sem_wait(pOvl_priv->SEM_t);
-    		if(pOvl_priv->SHM_fd > 0){
-    			if(pOvl_priv->SHM_mem){
-    				pOvl_priv->SHM_mem->ucount--;
-    				i = pOvl_priv->SHM_mem->ucount;
-    				munmap(pOvl_priv->SHM_mem, sizeof(SHMdt));
-    			}
-    			close(pOvl_priv->SHM_fd);
-    			if(!i)
-    				shm_unlink(SHM_NAME);
-    		}
-    		sem_post(pOvl_priv->SEM_t);
-
-    		sem_close(pOvl_priv->SEM_t);
-    	}
-
-/*    	if(sem_unlink(SEM_NAME) < 0){
-    		OVLDBG("Error: sem_unlink");
-    	}else{
-    		OVLDBG("sem deleted");
-    	}
-*/
         MFREE(pOvl_priv);
     }
 }

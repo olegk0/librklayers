@@ -126,9 +126,6 @@ typedef struct {
 	int				OvlsCnt;
 	uint32_t		Panel_w;
 	uint32_t		Panel_h;
-	int				SHM_fd;
-	SHMdt			*SHM_mem;
-	sem_t			*SEM_t;
 #ifdef RGA_ENABLE
 	int				fd_RGA;
 	pthread_mutex_t	rgamutex;
@@ -138,11 +135,6 @@ typedef struct {
 	pthread_mutex_t	ippmutex;
 #endif
 } OvlHWRec, *OvlHWPtr;
-
-#define STR_VAL(val)      #val
-#define TO_NAME(str) STR_VAL(str)
-#define SHM_NAME TO_NAME(LIBNAME) "_shm"
-#define SEM_NAME "/" TO_NAME(LIBNAME) "_sem"
 
 #define ToIntMemPg(mpg)	((ovlMemPgPtr)mpg)
 #define ToIntFb(fb)	((ovlFbPtr)fb)
@@ -163,6 +155,8 @@ int ovlInitUSIHW();
 int ovlUSIAllocMem( struct usi_ump_mbs *uum);
 int ovlUSIFreeMem( ump_secure_id	secure_id);
 int ovlUSIGetStat( struct usi_ump_mbs_info *uumi);
+int ovlUSIAllocRes(int res);
+int ovlUSIFreeRes(int res);
 int ovlclearbuf( ovlMemPgPtr PMemPg);
 
 

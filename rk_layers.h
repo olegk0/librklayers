@@ -78,7 +78,7 @@ typedef void *OvlFbPtr;
 
 typedef void *OvlLayPtr;
 
-int Open_RkLayers(void);
+int Open_RkLayers(Bool MasterMode);
 void Close_RkLayers(void);
 void OvlUpdFbMod(struct fb_var_screeninfo *var);
 int OvlInitMainFB(const char *dev_name, int depth);
@@ -126,7 +126,7 @@ uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg);
 void * OvlMapBufMem(OvlMemPgPtr PMemPg);
 int OvlUnMapBufMem(OvlMemPgPtr PMemPg);
 OvlLayPg OvlAllocLay(OvlLayoutType type, OvlFbBufAllocType FbBufAlloc);
-void OvlFreeLay(OvlLayPg layout);
+int OvlFreeLay(OvlLayPg layout);
 OvlMemPgPtr OvlAllocMemPg(uint32_t size, uint32_t YUV_offset);
 int OvlFreeMemPg(OvlMemPgPtr PMemPg);
 

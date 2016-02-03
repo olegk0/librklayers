@@ -49,6 +49,20 @@ int ovlUSIGetStat( struct usi_ump_mbs_info *uumi)
 
     return ioctl(pOvl_priv->fd_USI, USI_GET_INFO, uumi);
 }
+//-------------------------------------------------------------
+int ovlUSIAllocRes(int res)
+{
+//    int ret;
+
+    return ioctl(pOvl_priv->fd_USI, USI_ALLOC_RES, &res);
+}
+//-------------------------------------------------------------
+int ovlUSIFreeRes(int res)
+{
+//    int ret;
+
+    return ioctl(pOvl_priv->fd_USI, USI_FREE_RES, &res);
+}
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ovlMemPgPtr ovlInitMemPgDef()
 {

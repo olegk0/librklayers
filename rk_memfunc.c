@@ -21,7 +21,7 @@
 //++++++++++++++++++++++++++++++++++++USI++++++++++++++++++++++++++++++++++++++++++++
 int ovlInitUSIHW()
 {
-    return open(FB_DEV_USI, O_RDWR);
+    return open(FB_DEV_USI, O_RDONLY);
 }
 //-------------------------------------------------------------
 int ovlUSIAllocMem( struct usi_ump_mbs *uum)
@@ -29,15 +29,17 @@ int ovlUSIAllocMem( struct usi_ump_mbs *uum)
 //    int ret;
 
     if(uum->size < USI_MIN_ALLOC_SIZE)
-    	return -EINVAL;
-    return ioctl(overlay.fd_USI, USI_ALLOC_MEM_BLK, uum);
+    	uum->size = USI_MIN_ALLOC_SIZE;
+//    	return -EINVAL;
+    OVLDBG( "fd_USI:%d size:%d", pOvl_priv->fd_USI, uum->size);
+    return ioctl(pOvl_priv->fd_USI, USI_ALLOC_MEM_BLK, uum);
 }
 //-------------------------------------------------------------
 int ovlUSIFreeMem( ump_secure_id	secure_id)
 {
 //    int ret;
 
-    return ioctl(overlay.fd_USI, USI_FREE_MEM_BLK, &secure_id);
+    return ioctl(pOvl_priv->fd_USI, USI_FREE_MEM_BLK, &secure_id);
 }
 //-------------------------------------------------------------
 int ovlUSIGetStat( struct usi_ump_mbs_info *uumi)
@@ -45,7 +47,21 @@ int ovlUSIGetStat( struct usi_ump_mbs_info *uumi)
 //    int ret;
 //    struct usi_ump_mbs uum;
 
-    return ioctl(overlay.fd_USI, USI_GET_INFO, uumi);
+    return ioctl(pOvl_priv->fd_USI, USI_GET_INFO, uumi);
+}
+//-------------------------------------------------------------
+int ovlUSIAllocRes(int res)
+{
+//    int ret;
+
+    return ioctl(pOvl_priv->fd_USI, USI_ALLOC_RES, &res);
+}
+//-------------------------------------------------------------
+int ovlUSIFreeRes(int res)
+{
+//    int ret;
+
+    return ioctl(pOvl_priv->fd_USI, USI_FREE_RES, &res);
 }
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ovlMemPgPtr ovlInitMemPgDef()
@@ -90,10 +106,12 @@ void *OvlMapBufMem( OvlMemPgPtr PMemPg)
     if(PMemPg != NULL){
     	if(ToIntMemPg(PMemPg)->fb_mmap == NULL){
     		if(ToIntMemPg(PMemPg)->MemPgType == UIFB_MEM){
-    			ToIntMemPg(PMemPg)->fb_mmap = mmap( NULL, overlay.MaxPgSize, PROT_READ | PROT_WRITE, MAP_SHARED, overlay.OvlFb[UILayer].fd, 0);
+    			ToIntMemPg(PMemPg)->fb_mmap = mmap( NULL, ToIntMemPg(PMemPg)->buf_size, PROT_READ | PROT_WRITE, MAP_SHARED, pOvl_priv->OvlFb[UILayer].fd, 0);
     			//fbdevHWMapVidmem();
-//        		if(PMemPg->fb_mmap == MAP_FAILED)
-//        			PMemPg->fb_mmap = NULL;
+        		if(ToIntMemPg(PMemPg)->fb_mmap == MAP_FAILED){
+        			ERRMSG("Map failed:%d",errno);
+        			ToIntMemPg(PMemPg)->fb_mmap = NULL;
+        		}
         	}else{
         		if( ToIntMemPg(PMemPg)->ump_fb_secure_id == UMP_INVALID_SECURE_ID)
         			return NULL;
@@ -110,22 +128,48 @@ void *OvlMapBufMem( OvlMemPgPtr PMemPg)
     return NULL;
 }
 //------------------------------------------------------------------
-OvlMemPgPtr OvlAllocMemPg( unsigned long size)//except UI
+uint32_t OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg)
+{
+
+    if(PMemPg)
+    	return ToIntMemPg(PMemPg)->offset_uv;
+    else
+    	return 0;
+}
+//------------------------------------------------------------------
+uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg)
+{
+
+    if(PMemPg)
+    	return ToIntMemPg(PMemPg)->phy_addr;
+    else
+    	return 0;
+}
+//------------------------------------------------------------------
+OvlMemPgPtr OvlAllocMemPg( uint32_t size, uint32_t UV_offset)//except UI
 {
     OvlMemPgPtr MemPg;
     struct usi_ump_mbs uum;
+    int ret;
 
     MemPg = ovlInitMemPgDef();
     if(MemPg){
-    	uum.size = size;
-    	if(!ovlUSIAllocMem( &uum)){
+    	uum.size = size + UMP_MINIMUM_SIZE * 10; //~40kb save buf
+    	ret = ovlUSIAllocMem( &uum);
+    	if(!ret){
     		ToIntMemPg(MemPg)->buf_size = uum.size;
     		ToIntMemPg(MemPg)->phy_addr = uum.addr;
     		ToIntMemPg(MemPg)->ump_fb_secure_id = uum.secure_id;
-    		ToIntMemPg(MemPg)->offset_mio = ((ToIntMemPg(MemPg)->buf_size / 2) & ~PAGE_MASK);
+    		if(UV_offset)
+    			ToIntMemPg(MemPg)->offset_uv = ((UV_offset + PAGE_MASK) & ~PAGE_MASK);
+    		else
+    			ToIntMemPg(MemPg)->offset_uv = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
     	}else{
+    		ERRMSG( "Error USIAllocMem, size:%d ret:%d", size, ret);
     		MFREE(MemPg);
     	}
+    }else{
+    	ERRMSG( "Error InitMemPgDef");
     }
     return MemPg;
 }

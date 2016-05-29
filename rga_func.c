@@ -63,7 +63,7 @@ static int ovlRgaBlit( struct rga_req *RGA_req, int syncmode)
 
     int ret, timeout = 0;
 
-    while(pthread_mutex_trylock(&overlay.rgamutex) ==  EBUSY){
+    while(pthread_mutex_trylock(&Ovl_priv.rgamutex) ==  EBUSY){
     	timeout++;
     	if(timeout > HW_TIMEOUT){
     		OVLDBG("Timeout rga");
@@ -71,8 +71,8 @@ static int ovlRgaBlit( struct rga_req *RGA_req, int syncmode)
     	}
     	usleep(1);
     }
-    ret = ioctl(overlay.fd_RGA, syncmode, RGA_req);
-    pthread_mutex_unlock(&overlay.rgamutex);
+    ret = ioctl(Ovl_priv.fd_RGA, syncmode, RGA_req);
+    pthread_mutex_unlock(&Ovl_priv.rgamutex);
     return ret;
 }
 //------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ void ovlRgaInitReg( struct rga_req *RGA_req, uint32_t SrcYAddr, int SrcFrmt, int
 //    RGA_req->src.v_addr   = SrcVAddr;
 
     RGA_req->src.vir_w = Src_vir;
-    RGA_req->src.vir_h = overlay.cur_var.yres;
+    RGA_req->src.vir_h = Ovl_priv.cur_var.yres;
     RGA_req->src.x_offset = Src_x;
     RGA_req->src.y_offset = Src_y;
 //Dst
@@ -108,7 +108,7 @@ void ovlRgaInitReg( struct rga_req *RGA_req, uint32_t SrcYAddr, int SrcFrmt, int
     RGA_req->dst.yrgb_addr = DstYAddr;
 
     RGA_req->clip.xmax = Dst_vir-1;
-    RGA_req->clip.ymax = overlay.cur_var.yres-1;
+    RGA_req->clip.ymax = Ovl_priv.cur_var.yres-1;
 
 //    RGA_req->src_trans_mode = 1;
 
@@ -176,10 +176,10 @@ int Ovl2dBlt( uint32_t *src_bits, uint32_t *dst_bits, int src_stride, int dst_st
 
     SrcFrmt = ovlBppToRga(src_bpp);
     DstFrmt = ovlBppToRga(dst_bpp);
-	ovlRgaInitReg( &overlay.OvlLay[UIL].RGA_req, (uint32_t)src_bits, SrcFrmt, DstFrmt,
+	ovlRgaInitReg( &Ovl_priv.OvlLay[UIL].RGA_req, (uint32_t)src_bits, SrcFrmt, DstFrmt,
 			(uint32_t)dst_bits, src_x, src_y, w, h, dst_x, dst_y, src_stride, dst_stride, FALSE);
 
-	ret = ovlRgaBlit( &overlay.OvlLay[UIL].RGA_req, RGA_BLIT_SYNC);
+	ret = ovlRgaBlit( &Ovl_priv.OvlLay[UIL].RGA_req, RGA_BLIT_SYNC);
 	if(ret < 0)
 		OVLDBG("rga ret:%d",ret);
 	OVLDBG("\n src_x:%d, src_y:%d, w:%d, h:%d, dst_x:%d, dst_y:%d, src_stride:%d, dst_stride:%d",src_x, src_y, w, h, dst_x, dst_y, src_stride, dst_stride);
@@ -195,8 +195,8 @@ int OvlCpBufToDisp( OvlMemPgPtr PMemPg, OvlLayPg layout)
     OVLDBG("OvlCpBufToDisp OvlPg:%d\n",layout);
 //	overlay.OvlLay[layout].ResChange = FALSE;
     if(layout < MAX_OVERLAYs && layout >= 0){
-    	overlay.OvlLay[layout].RGA_req.src.yrgb_addr = PMemPg->phy_addr;
-    	return ovlRgaBlit( &overlay.OvlLay[layout].RGA_req, RGA_BLIT_SYNC);
+    	Ovl_priv.OvlLay[layout].RGA_req.src.yrgb_addr = PMemPg->phy_addr;
+    	return ovlRgaBlit( &Ovl_priv.OvlLay[layout].RGA_req, RGA_BLIT_SYNC);
     }
     OVLDBG("OvlCpBufToDisp Error");
     return -1;

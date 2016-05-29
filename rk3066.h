@@ -62,34 +62,34 @@ enum {
 #define FB_MAXPGS_UI 1
 */
 
-#define PANEL_SIZE_X 1920
+#define MAX_PANEL_SIZE_X 1920
 //#define PANEL_SIZE_X 1280
-#define PANEL_SIZE_Y 1080
+#define MAX_PANEL_SIZE_Y 1080
 //#define PANEL_SIZE_Y 720
 
-#define FB_MAXPGSIZE PANEL_SIZE_X*PANEL_SIZE_Y*4
+#define FB_MAXPGSIZE MAX_PANEL_SIZE_X*MAX_PANEL_SIZE_Y*4
 
+#define RK_FBIOPUT_COLOR_KEY_CFG    0x4626
+#define RK_FBIOSET_VSYNC_ENABLE     0x4629
 #define RK_FBIOGET_PANEL_SIZE	0x5001
 #define RK_FBIOSET_YUV_ADDR	0x5002
-#define FBIOSET_COLORKEY	0x5010
-#define FBIOSET_DISP_PSET	0x5011
-
 
 #define RK_FBIOSET_OVERLAY_STATE   0x5018
 #define RK_FBIOSET_ENABLE          0x5019
 #define RK_FBIOGET_ENABLE          0x5020
 #define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
 
+struct color_key_cfg {
+	uint32_t win0_color_key_cfg;
+	uint32_t win1_color_key_cfg;
+	uint32_t win2_color_key_cfg;
+};
+
 typedef struct
 {
-    int		poffset_x;	//Panel offset x
-    int		poffset_y;	//Panel offset y
-    int		ssize_w;	//Source img size width, 0-not change
-    int		ssize_h;	//Source img size height, 0-not change
-    int		scale_w;	//Scale size width, 0-not change
-    int		scale_h;	//Scale size height, 0-not change
-} SFbioDispSet;
-
+    uint32_t	size_x;
+    uint32_t	size_y;
+} SPanelSize;
 
 enum {
     RGBA_8888          = 1,

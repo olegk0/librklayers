@@ -487,7 +487,7 @@ int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType format, uint32_t xres, uint
     			break;
     		case EMU2Layer_RGA:
     			ovlRgaInitReg( 0, 0, 0,
-    				pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB]->phy_addr, xres, yres,
+    					pOvl_priv->OvlFb[UILayer].fix.smem_start, xres, yres,
 					pOvl_priv->OvlLay[EMU2Layer_RGA].var.xres_virtual, pOvl_priv->OvlLay[UILayer].var.xres_virtual, TRUE);
     			ovlRGASetFormats(ovlFromHWRkFormat(pOvl_priv->OvlLay[UILayer].var.nonstd), BOTH_MODE);
     			break;
@@ -509,7 +509,8 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h)
     	if(layout >= EMU1Layer_IPP){
     		switch(layout){
     		case EMU1Layer_IPP:
-    			ovlIPPSetDrw(pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB]->phy_addr, Drw_w, Drw_h, Drw_x, Drw_y, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
+    			ovlIPPSetDrw(pOvl_priv->OvlFb[UILayer].fix.smem_start, Drw_w, Drw_h, Drw_x, Drw_y,
+    					pOvl_priv->OvlLay[UILayer].var.xres_virtual);
     			break;
     		case EMU2Layer_RGA:
     			ovlRGASetDrw( Drw_w, Drw_h, Drw_x, Drw_y);
@@ -539,16 +540,16 @@ int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
     	switch(layout){
 #ifdef IPP_ENABLE
     	case EMU1Layer_IPP:
-    		if(pOvl_priv->IPP_req.src0.YrgbMst && pOvl_priv->IPP_req.dst0.YrgbMst){
-    			ovlIPPSetSrc(FbByLay(EMU1Layer_IPP)->CurMemPg->phy_addr);
+    		if(pOvl_priv->IPP_req.dst0.YrgbMst){
+    			ovlIPPSetSrc(ToIntMemPg(MemPg)->phy_addr);
     			ret = ovlIppBlit();
     		}
     		break;
 #endif
 #ifdef RGA_ENABLE
     	case EMU2Layer_RGA:
-    		if(pOvl_priv->RGA_req.src.yrgb_addr && pOvl_priv->RGA_req.dst.yrgb_addr){
-    			ovlRGASetSrc(FbByLay(EMU2Layer_RGA)->CurMemPg->phy_addr);
+    		if(pOvl_priv->RGA_req.dst.yrgb_addr){
+    			ovlRGASetSrc(ToIntMemPg(MemPg)->phy_addr);
     			ret = ovlRgaBlit(RGA_BLIT_SYNC);
     		}
     		break;
@@ -720,16 +721,18 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     	return ERROR_L;
     }
 
+    OVLDBG("Select lay:%d", lay);
+
     if(LayValid(lay)){
     	if(FbBufAlloc > ALC_NONE_FB){
 //front fb first by def
     		if(!pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB]){
-        		if(lay == UI_L){//User Interface layer
-        			pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB] = ovlInitMemPgDef();
-        			if(pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB]){
-        				pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB]->phy_addr = pOvl_priv->OvlFb[UI_L].fix.smem_start;
-        				pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB]->buf_size = pOvl_priv->OvlFb[UI_L].fix.smem_len;
-        				pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB]->MemPgType = UIFB_MEM;
+        		if(lay == UILayer){//User Interface layer
+        			pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB] = ovlInitMemPgDef();
+        			if(pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB]){
+        				pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB]->phy_addr = pOvl_priv->OvlFb[UILayer].fix.smem_start;
+        				pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB]->buf_size = pOvl_priv->OvlFb[UILayer].fix.smem_len;
+        				pOvl_priv->OvlLay[UILayer].FbMemPgs[FRONT_FB]->MemPgType = UIFB_MEM;
         			}
         		}else{
         			pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB] = OvlAllocMemPg( pOvl_priv->MaxPgSize, 0);//TODO size
@@ -1002,7 +1005,7 @@ err:
 //----------------------------main init--------------------------
 int Open_RkLayers(Bool MasterMode)
 {
-	int ret=0, i;//, tmp=1;
+	int ret=0;//, tmp=1;
 
 	OVLDBG("");
 
@@ -1069,6 +1072,7 @@ int Open_RkLayers(Bool MasterMode)
     	goto err;
     }
 
+    OVLDBG("OvlsCnt:%d", pOvl_priv->OvlsCnt);
     set_ovl_param(MasterMode);
 
     OVLDBG( "HW:Initialize USI");

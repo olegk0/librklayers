@@ -37,6 +37,10 @@ int ovlIppBlit()
     }
     ret = ioctl(pOvl_priv->OvlFb[EMU1Layer_IPP].fd, IPP_BLIT_SYNC, &pOvl_priv->IPP_req);
     pthread_mutex_unlock(&pOvl_priv->ippmutex);
+#ifdef DEBUG
+    if(ret)
+    	OVLDBG("ret:%d",ret);
+#endif
     return ret;
 }
 //-----------------------------------------------------------------------
@@ -65,7 +69,7 @@ void ovlIppInitReg(uint32_t SrcYAddr, int SrcFrmt, int Src_w, int Src_h,
 //--------------------------------------------------------------------------------
 void ovlIPPSetFormats(OvlLayoutFormatType format)
 {
-    uint8_t		IPP_mode=IPP_XRGB_8888;
+    uint32_t IPP_mode=IPP_XRGB_8888;
 
     switch(format) {
 /*    case RK_FORMAT_RGB_888:
@@ -118,6 +122,7 @@ void ovlIPPSetDrw(uint32_t DstYAddr, int Drw_w, int Drw_h, int Drw_x, int Drw_y,
 	IPP_mode = IPP_Y_CBCR_H2V2;
 	IPP_mode = IPP_Y_CBCR_H2V1;*/
     }
+    OVLDBG("fmt:%d DstYAddr:0x%X  adr_offs:%d",pOvl_priv->IPP_req.src0.fmt,DstYAddr,adr_offs);
     pOvl_priv->IPP_req.dst0.YrgbMst = DstYAddr + adr_offs;
 }
 //--------------------------------------------------------------------------------

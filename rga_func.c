@@ -24,29 +24,29 @@ void DdgPrintRGA( struct rga_req *RGA_req)
 
 
 
-    OVLDBG("src.format:%d\n",RGA_req.src.format);
-    OVLDBG("src.act_w:%d\n",RGA_req.src.act_w);
-    OVLDBG("src.act_h:%d\n",RGA_req.src.act_h);
+    OVLDBG("src.format:%d\n",RGA_req->src.format);
+    OVLDBG("src.act_w:%d\n",RGA_req->src.act_w);
+    OVLDBG("src.act_h:%d\n",RGA_req->src.act_h);
 
-    OVLDBG("src.yrgb_addr:0x%X\n",RGA_req.src.yrgb_addr);
-    OVLDBG("src.uv_addr:0x%X\n",RGA_req.src.uv_addr);
-    OVLDBG("src.v_addr:0x%X\n",RGA_req.src.v_addr);
+    OVLDBG("src.yrgb_addr:0x%X\n",RGA_req->src.yrgb_addr);
+    OVLDBG("src.uv_addr:0x%X\n",RGA_req->src.uv_addr);
+    OVLDBG("src.v_addr:0x%X\n",RGA_req->src.v_addr);
 
-    OVLDBG("src.vir_w:%d\n",RGA_req.src.vir_w);
-    OVLDBG("src.vir_h:%d\n",RGA_req.src.vir_h);
+    OVLDBG("src.vir_w:%d\n",RGA_req->src.vir_w);
+    OVLDBG("src.vir_h:%d\n",RGA_req->src.vir_h);
 //Dst
-    OVLDBG("dst.vir_w:%d\n",RGA_req.dst.vir_w);
-    OVLDBG("dst.vir_h:%d\n",RGA_req.dst.vir_h);
-    OVLDBG("dst.x_offset:%d\n",RGA_req.dst.x_offset);
-    OVLDBG("dst.y_offset:%d\n",RGA_req.dst.y_offset);
-    OVLDBG("dst.act_w:%d\n",RGA_req.dst.act_w);
-    OVLDBG("dst.act_h:%d\n",RGA_req.dst.act_h);//1/2
+    OVLDBG("dst.vir_w:%d\n",RGA_req->dst.vir_w);
+    OVLDBG("dst.vir_h:%d\n",RGA_req->dst.vir_h);
+    OVLDBG("dst.x_offset:%d\n",RGA_req->dst.x_offset);
+    OVLDBG("dst.y_offset:%d\n",RGA_req->dst.y_offset);
+    OVLDBG("dst.act_w:%d\n",RGA_req->dst.act_w);
+    OVLDBG("dst.act_h:%d\n",RGA_req->dst.act_h);//1/2
 
-    OVLDBG("dst.format:%d\n",RGA_req.dst.format);
-    OVLDBG("dst.yrgb_addr:0x%X\n",RGA_req.dst.yrgb_addr);
+    OVLDBG("dst.format:%d\n",RGA_req->dst.format);
+    OVLDBG("dst.yrgb_addr:0x%X\n",RGA_req->dst.yrgb_addr);
 
-    OVLDBG("clip.xmax:%d\n",RGA_req.clip.xmax);
-    OVLDBG("clip.ymax:%d\n",RGA_req.clip.ymax);
+    OVLDBG("clip.xmax:%d\n",RGA_req->clip.xmax);
+    OVLDBG("clip.ymax:%d\n",RGA_req->clip.ymax);
 }
 #endif
 
@@ -73,6 +73,10 @@ int ovlRgaBlit(int syncmode)
     }
     ret = ioctl(pOvl_priv->OvlFb[EMU2Layer_RGA].fd, syncmode, &pOvl_priv->RGA_req);
     pthread_mutex_unlock(&pOvl_priv->rgamutex);
+#ifdef DEBUG
+    if(ret)
+    	OVLDBG("ret:%d",ret);
+#endif
     return ret;
 }
 //------------------------------------------------------------------------------

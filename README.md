@@ -2,4 +2,4 @@
 
 Work In Progress
 
-For xf86-video-rkfb v0...
+For xf86-video-rkfb v0.9

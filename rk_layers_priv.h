@@ -81,8 +81,8 @@ enum {
 	UILayer=0,
 	Ovl1Layer=1,
 	Ovl2Layer=2,
-	EMU1Layer_IPP=3,
-	EMU2Layer_RGA=4,
+	EMU1Layer_RGA=3,
+	EMU2Layer_IPP=4,
 };
 
 typedef struct
@@ -151,7 +151,7 @@ typedef struct {
 #define LayIsUIfb(layout)	(pOvl_priv->OvlFb[layout].Type == UI_L)
 
 #define LayValid(lay) (lay < MAX_OVERLAYs && lay >= 0 && pOvl_priv->OvlsAvl[lay])
-#define LayHWValid(lay) (lay < EMU1Layer_IPP && lay >= 0 && pOvl_priv->OvlsAvl[lay])
+#define LayHWValid(lay) (lay < EMU1Layer_RGA && lay >= 0 && pOvl_priv->OvlsAvl[lay])
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))
 #define LayHWValidAndNotUI(lay) (LayHWValid(lay) && !LayIsUIfb(lay))
 

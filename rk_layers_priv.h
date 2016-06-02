@@ -1,5 +1,5 @@
 /*
- *  For rk3066
+ *  For rk3066 - rk3188
  *  Author: olegk0 <olegvedi@gmail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -30,8 +30,9 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-//#include <pthread.h>
+#include <pthread.h>
 #include <semaphore.h>
+#include <string.h>
 
 #include "rk_layers.h"
 #ifdef IPP_ENABLE
@@ -47,7 +48,10 @@
 #include <stdio.h>
 #include "chroma_neon.h"
 
-//#define DEBUG 1
+/*#define RGA_ENABLE 1
+#define IPP_ENABLE 1
+*/
+#define DEBUG 1
 
 #ifdef DEBUG
 #define OVLDBG(format, args...)		fprintf(stderr, "RK_LAY(%s):" format "\n", __func__, ## args)
@@ -63,16 +67,22 @@
 #define TRUE 1
 #define FALSE 0
 
-#define MAX_OVERLAYs 3
-/*
-#define SRC_MODE TRUE
-#define DST_MODE FALSE
-*/
+#define MAX_OVERLAYs 5
+
+#ifdef RGA_ENABLE
+typedef enum {
+	SRC_MODE=0,
+	DST_MODE,
+	BOTH_MODE,
+} RGAUpdModeType;
+#endif
 
 enum {
 	UILayer=0,
 	Ovl1Layer=1,
 	Ovl2Layer=2,
+	EMU1Layer_IPP=3,
+	EMU2Layer_RGA=4,
 };
 
 typedef struct
@@ -105,12 +115,6 @@ typedef struct {
 	ovlMemPgPtr		FbMemPgs[2];
 	struct fb_var_screeninfo	var;
 	OvlLayoutType	ReqType;
-#ifdef RGA_ENABLE
-	struct rga_req	RGA_req;
-#endif
-#ifdef IPP_ENABLE
-	struct rk29_ipp_req	IPP_req;
-#endif
 	Bool			InUse;
 //	Bool			ResChange;
 } ovlLayRec, *ovlLayPtr;
@@ -123,16 +127,19 @@ typedef struct {
 	struct fb_var_screeninfo	cur_var;
 //	struct fb_var_screeninfo	sav_var;
 //	Bool			ResChange;
+	Bool			OvlsAvl[MAX_OVERLAYs];
 	int				OvlsCnt;
 	uint32_t		Panel_w;
 	uint32_t		Panel_h;
 #ifdef RGA_ENABLE
-	int				fd_RGA;
+//	int				fd_RGA;
 	pthread_mutex_t	rgamutex;
+	struct rga_req	RGA_req;
 #endif
 #ifdef IPP_ENABLE
-	int				fd_IPP;
+//	int				fd_IPP;
 	pthread_mutex_t	ippmutex;
+	struct rk29_ipp_req	IPP_req;
 #endif
 } OvlHWRec, *OvlHWPtr;
 
@@ -141,10 +148,12 @@ typedef struct {
 #define FbByLay(layout) (pOvl_priv->OvlLay[layout].OvlFb)
 #define MBufByLay(layout) (FbByLay(layout)->CurMemPg)
 
-#define LayIsUIfb(layout)	(pOvl_priv->OvlFb[layout].Type == UIL)
+#define LayIsUIfb(layout)	(pOvl_priv->OvlFb[layout].Type == UI_L)
 
-#define LayValid(lay) (lay < pOvl_priv->OvlsCnt && lay >= 0)
+#define LayValid(lay) (lay < MAX_OVERLAYs && lay >= 0 && pOvl_priv->OvlsAvl[lay])
+#define LayHWValid(lay) (lay < EMU1Layer_IPP && lay >= 0 && pOvl_priv->OvlsAvl[lay])
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))
+#define LayHWValidAndNotUI(lay) (LayHWValid(lay) && !LayIsUIfb(lay))
 
 #define MemPgIsUI(mpg)	(ToIntMemPg(mpg)->MemPgType == UIFB_MEM)
 
@@ -159,5 +168,24 @@ int ovlUSIAllocRes(int res);
 int ovlUSIFreeRes(int res);
 int ovlclearbuf( ovlMemPgPtr PMemPg);
 
+#ifdef IPP_ENABLE
+int ovlInitIPPHW();
+int ovlIppBlit();
+void ovlIppInitReg( uint32_t SrcYAddr, int SrcFrmt, int Src_w, int Src_h,
+		uint32_t DstYAddr, int Src_vir, int Dst_vir);
+void ovlIPPSetFormats(OvlLayoutFormatType format);
+void ovlIPPSetDrw(uint32_t DstYAddr, int Drw_w, int Drw_h, int Drw_x, int Drw_y, int Dst_vir);
+void ovlIPPSetSrc(uint32_t SrcYAddr);
+#endif
+
+#ifdef RGA_ENABLE
+int ovlInitRGAHW();
+int ovlRgaBlit(int syncmode);
+void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
+		uint32_t DstYAddr, int Src_x, int Src_y, int Src_vir, int Dst_vir, Bool PhyAdr);
+void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode);
+void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y);
+void ovlRGASetSrc(uint32_t SrcYAddr);
+#endif
 
 #endif

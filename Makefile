@@ -1,7 +1,7 @@
 DEBUG ?=y
 
-ENABLE_RGA ?=n
-ENABLE_IPP ?=n
+ENABLE_RGA ?=y
+ENABLE_IPP ?=y
 
 ifeq ($(ENABLE_IPP),y)
 DEFINES += -DIPP_ENABLE

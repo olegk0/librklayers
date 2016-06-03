@@ -71,7 +71,7 @@ int ovlRgaBlit(int syncmode)
     	}
     	usleep(1);
     }
-    ret = ioctl(pOvl_priv->OvlFb[EMU2Layer_IPP].fd, syncmode, &pOvl_priv->RGA_req);
+    ret = ioctl(pOvl_priv->OvlFb[EMU2Layer_RGA].fd, syncmode, &pOvl_priv->RGA_req);
     pthread_mutex_unlock(&pOvl_priv->rgamutex);
 #ifdef DEBUG
     if(ret)

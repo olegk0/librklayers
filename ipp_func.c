@@ -35,7 +35,7 @@ int ovlIppBlit()
 	    return -1;
 	}
     }
-    ret = ioctl(pOvl_priv->OvlFb[EMU1Layer_RGA].fd, IPP_BLIT_SYNC, &pOvl_priv->IPP_req);
+    ret = ioctl(pOvl_priv->OvlFb[EMU1Layer_IPP].fd, IPP_BLIT_SYNC, &pOvl_priv->IPP_req);
     pthread_mutex_unlock(&pOvl_priv->ippmutex);
 #ifdef DEBUG
     if(ret)

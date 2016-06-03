@@ -87,6 +87,7 @@ void Close_RkLayers(void);
 void OvlUpdFbMod(struct fb_var_screeninfo *var);
 int OvlInitMainFB(const char *dev_name, int depth);
 int OvlSetHDMI(int xres,int yres);
+uint32_t OvlGetVersion();
 
 void OvlCopyPackedToFb(OvlMemPgPtr PMemPg, const void *src, int dstPitch, int srcPitch, int w, int h, Bool reverse);
 void OvlCopyPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_U, const void *src_V,

@@ -182,7 +182,7 @@ void ovlIPPSetSrc(uint32_t SrcYAddr);
 int ovlInitRGAHW();
 int ovlRgaBlit(int syncmode);
 void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
-		uint32_t DstYAddr, int Src_x, int Src_y, int Src_vir, int Dst_vir, Bool PhyAdr);
+		uint32_t DstYAddr, int Src_w, int Src_h, int Src_vir, int Dst_vir, Bool PhyAdr);
 void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode);
 void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y);
 void ovlRGASetSrc(uint32_t SrcYAddr);

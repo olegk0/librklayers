@@ -81,25 +81,26 @@ int ovlRgaBlit(int syncmode)
 }
 //------------------------------------------------------------------------------
 void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
-		uint32_t DstYAddr, int Src_x, int Src_y, int Src_vir, int Dst_vir, Bool PhyAdr)
+		uint32_t DstYAddr, int Src_w, int Src_h, int Src_vir, int Dst_vir, Bool PhyAdr)
 {
     memset(&pOvl_priv->RGA_req, 0, sizeof(struct rga_req));
 //Src
     pOvl_priv->RGA_req.src.format = SrcFrmt;//    = 0x1,;
-//    RGA_req.src.act_w = Drw_w;
-//    RGA_req.src.act_h = Drw_h;
+    pOvl_priv->RGA_req.src.act_w = Src_w;
+    pOvl_priv->RGA_req.src.act_h = Src_h;
 
     pOvl_priv->RGA_req.src.yrgb_addr = SrcYAddr;
 //    RGA_req.src.uv_addr  = SrcUVAddr;
 //    RGA_req.src.v_addr   = SrcVAddr;
 
     pOvl_priv->RGA_req.src.vir_w = Src_vir;
-    pOvl_priv->RGA_req.src.vir_h = pOvl_priv->OvlLay[UILayer].var.yres_virtual;
-    pOvl_priv->RGA_req.src.x_offset = Src_x;
+    pOvl_priv->RGA_req.src.vir_h = Src_h;
+/*    pOvl_priv->RGA_req.src.x_offset = Src_x;
     pOvl_priv->RGA_req.src.y_offset = Src_y;
+    */
 //Dst
-    pOvl_priv->RGA_req.dst.vir_w = Dst_vir;
-    pOvl_priv->RGA_req.dst.vir_h = pOvl_priv->RGA_req.src.vir_h;
+    pOvl_priv->RGA_req.dst.vir_w = pOvl_priv->OvlLay[UILayer].var.xres_virtual;
+    pOvl_priv->RGA_req.dst.vir_h = pOvl_priv->OvlLay[UILayer].var.yres_virtual;
 //    RGA_req.dst.x_offset = Drw_x;
 //    RGA_req.dst.y_offset = Drw_y;
     pOvl_priv->RGA_req.dst.act_w = pOvl_priv->RGA_req.src.act_w;
@@ -108,8 +109,8 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
     pOvl_priv->RGA_req.dst.format = DstFrmt;
     pOvl_priv->RGA_req.dst.yrgb_addr = DstYAddr;
 
-    pOvl_priv->RGA_req.clip.xmax = Dst_vir-1;
-    pOvl_priv->RGA_req.clip.ymax = pOvl_priv->RGA_req.src.vir_h-1;
+    pOvl_priv->RGA_req.clip.xmax = pOvl_priv->RGA_req.dst.vir_w;
+    pOvl_priv->RGA_req.clip.ymax = pOvl_priv->RGA_req.dst.vir_h;
 
 //    RGA_req.src_trans_mode = 1;
 
@@ -163,14 +164,14 @@ void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
 void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y)
 {
 
-//Src
+/*
 	pOvl_priv->RGA_req.src.act_w = Drw_w;
 	pOvl_priv->RGA_req.src.act_h = Drw_h;
-
+*/
 	pOvl_priv->RGA_req.dst.x_offset = Drw_x;
 	pOvl_priv->RGA_req.dst.y_offset = Drw_y;
-	pOvl_priv->RGA_req.dst.act_w = pOvl_priv->RGA_req.src.act_w;
-	pOvl_priv->RGA_req.dst.act_h = pOvl_priv->RGA_req.src.act_h;//1/2
+	pOvl_priv->RGA_req.dst.act_w = Drw_w;
+	pOvl_priv->RGA_req.dst.act_h = Drw_h;//1/2
 //    RGA_req.clip.xmax = overlay.cur_var.xres-1;
 //    RGA_req.clip.ymax = overlay.cur_var.yres-1;
 }

@@ -18,35 +18,35 @@
 
 #include "rk_layers_priv.h"
 
+//#define DEBUGRGA
+
 #ifdef DEBUGRGA
 void DdgPrintRGA( struct rga_req *RGA_req)
 {
 
+    OVLDBG("src.format:%d",RGA_req->src.format);
+    OVLDBG("src.act_w:%d",RGA_req->src.act_w);
+    OVLDBG("src.act_h:%d",RGA_req->src.act_h);
 
+    OVLDBG("src.yrgb_addr:0x%X",RGA_req->src.yrgb_addr);
+    OVLDBG("src.uv_addr:0x%X",RGA_req->src.uv_addr);
+    OVLDBG("src.v_addr:0x%X",RGA_req->src.v_addr);
 
-    OVLDBG("src.format:%d\n",RGA_req->src.format);
-    OVLDBG("src.act_w:%d\n",RGA_req->src.act_w);
-    OVLDBG("src.act_h:%d\n",RGA_req->src.act_h);
-
-    OVLDBG("src.yrgb_addr:0x%X\n",RGA_req->src.yrgb_addr);
-    OVLDBG("src.uv_addr:0x%X\n",RGA_req->src.uv_addr);
-    OVLDBG("src.v_addr:0x%X\n",RGA_req->src.v_addr);
-
-    OVLDBG("src.vir_w:%d\n",RGA_req->src.vir_w);
-    OVLDBG("src.vir_h:%d\n",RGA_req->src.vir_h);
+    OVLDBG("src.vir_w:%d",RGA_req->src.vir_w);
+    OVLDBG("src.vir_h:%d",RGA_req->src.vir_h);
 //Dst
-    OVLDBG("dst.vir_w:%d\n",RGA_req->dst.vir_w);
-    OVLDBG("dst.vir_h:%d\n",RGA_req->dst.vir_h);
-    OVLDBG("dst.x_offset:%d\n",RGA_req->dst.x_offset);
-    OVLDBG("dst.y_offset:%d\n",RGA_req->dst.y_offset);
-    OVLDBG("dst.act_w:%d\n",RGA_req->dst.act_w);
-    OVLDBG("dst.act_h:%d\n",RGA_req->dst.act_h);//1/2
+    OVLDBG("dst.vir_w:%d",RGA_req->dst.vir_w);
+    OVLDBG("dst.vir_h:%d",RGA_req->dst.vir_h);
+    OVLDBG("dst.x_offset:%d",RGA_req->dst.x_offset);
+    OVLDBG("dst.y_offset:%d",RGA_req->dst.y_offset);
+    OVLDBG("dst.act_w:%d",RGA_req->dst.act_w);
+    OVLDBG("dst.act_h:%d",RGA_req->dst.act_h);//1/2
 
-    OVLDBG("dst.format:%d\n",RGA_req->dst.format);
-    OVLDBG("dst.yrgb_addr:0x%X\n",RGA_req->dst.yrgb_addr);
+    OVLDBG("dst.format:%d",RGA_req->dst.format);
+    OVLDBG("dst.yrgb_addr:0x%X",RGA_req->dst.yrgb_addr);
 
-    OVLDBG("clip.xmax:%d\n",RGA_req->clip.xmax);
-    OVLDBG("clip.ymax:%d\n",RGA_req->clip.ymax);
+    OVLDBG("clip.xmax:%d",RGA_req->clip.xmax);
+    OVLDBG("clip.ymax:%d",RGA_req->clip.ymax);
 }
 #endif
 
@@ -59,9 +59,11 @@ int ovlInitRGAHW()
 //-------------------------------------------------------------
 int ovlRgaBlit(int syncmode)
 {
-
-
     int ret, timeout = 0;
+
+#ifdef DEBUGRGA
+    DdgPrintRGA(&pOvl_priv->RGA_req);
+#endif
 
     while(pthread_mutex_trylock(&pOvl_priv->rgamutex) ==  EBUSY){
     	timeout++;
@@ -99,7 +101,7 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
     pOvl_priv->RGA_req.src.y_offset = Src_y;
     */
 //Dst
-    pOvl_priv->RGA_req.dst.vir_w = pOvl_priv->OvlLay[UILayer].var.xres_virtual;
+    pOvl_priv->RGA_req.dst.vir_w = Dst_vir;
     pOvl_priv->RGA_req.dst.vir_h = pOvl_priv->OvlLay[UILayer].var.yres_virtual;
 //    RGA_req.dst.x_offset = Drw_x;
 //    RGA_req.dst.y_offset = Drw_y;
@@ -109,10 +111,12 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
     pOvl_priv->RGA_req.dst.format = DstFrmt;
     pOvl_priv->RGA_req.dst.yrgb_addr = DstYAddr;
 
-    pOvl_priv->RGA_req.clip.xmax = pOvl_priv->RGA_req.dst.vir_w;
-    pOvl_priv->RGA_req.clip.ymax = pOvl_priv->RGA_req.dst.vir_h;
+    pOvl_priv->RGA_req.clip.xmax = pOvl_priv->RGA_req.dst.vir_w -1;
+    pOvl_priv->RGA_req.clip.ymax = pOvl_priv->RGA_req.dst.vir_h -1;
 
 //    RGA_req.src_trans_mode = 1;
+    pOvl_priv->RGA_req.scale_mode = 1; // 0 nearst / 1 bilnear / 2 bicubic
+//    pOvl_priv->RGA_req.render_mode = pre_scaling_mode;
 
     if(!PhyAdr){
     	pOvl_priv->RGA_req.mmu_info.mmu_en = 1;
@@ -181,6 +185,13 @@ void ovlRGASetSrc(uint32_t SrcYAddr)
     pOvl_priv->RGA_req.src.yrgb_addr = SrcYAddr;
 //    RGA_req.src.uv_addr  = SrcUVAddr;
 //    RGA_req.src.v_addr   = SrcVAddr;
+}
+//---------------------------------------------------------------
+void ovlRGASetDst(uint32_t DstYAddr, int Dst_vir)
+{
+	pOvl_priv->RGA_req.dst.yrgb_addr = DstYAddr;
+	if(Dst_vir)
+		pOvl_priv->RGA_req.dst.vir_w = Dst_vir;
 }
 /*
 static int ovlBppToRga(int bpp)//BIT per pixel

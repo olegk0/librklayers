@@ -30,7 +30,7 @@ OvlHWPtr pOvl_priv;
 
 //******************************************************************************
 //int xf86LoadKernelModule(const char *modName)
-int LoadKernelModule(const char *modName)
+static int LoadKernelModule(const char *modName)
 {
     char mpPath[MAX_PATH] = "";
     int fd = -1, status, n;
@@ -167,7 +167,7 @@ int OvlSetHDMI(int xres,int yres)
     return ret;
 }
 //-----------------------------------------------------------------
-uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
+static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
 {
 	uint32_t ret;
 
@@ -210,7 +210,7 @@ uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
     return ret;
 }
 //-----------------------------------------------------------------
-OvlLayoutFormatType ovlFromHWRkFormat(uint32_t format)
+static OvlLayoutFormatType ovlFromHWRkFormat(uint32_t format)
 {
 	uint32_t ret;
 
@@ -288,7 +288,31 @@ int OvlGetBppByLay(OvlLayPg layout)
     return ret;
 }
 //--------------------------------------------------------------------------------
-
+uint32_t OvlGetFbSizeByLay( OvlLayPg layout)
+{
+    if(LayValid(layout)){
+    	int bpp;
+        switch(pOvl_priv->OvlLay[layout].var.nonstd & 0xff) {
+        case YCrCb_444:
+    		bpp = 6;
+    		break;
+        case YCbCr_422_SP:
+        case YCbCr_422_P:
+    		bpp = 4;
+    		break;
+        case YCrCb_NV12_SP:
+        case YCrCb_NV12_P:
+    		bpp = 3;
+    		break;
+        default:
+        	bpp = OvlGetBppByLay(layout) * 2;
+        }
+    	return (pOvl_priv->OvlLay[layout].var.xres_virtual * pOvl_priv->OvlLay[layout].var.yres_virtual * bpp) / 2;
+//    	return MBufByLay(layout);
+    }else
+    	return 0;
+}
+//--------------------------------------------------------------------------------
 OvlMemPgPtr OvlGetBufByLay( OvlLayPg layout, OvlFbBufType BufType)
 {
     if(LayValid(layout))
@@ -297,7 +321,6 @@ OvlMemPgPtr OvlGetBufByLay( OvlLayPg layout, OvlFbBufType BufType)
     else
     	return NULL;
 }
-
 //--------------------------------------------------------------------------------
 uint32_t OvlGetVXresByLay( OvlLayPg layout)
 {
@@ -382,14 +405,17 @@ int OvlSetColorKey( uint32_t color)
 
 }
 //------------------------------------------------------------------
-int OvlWaitSync( OvlLayPg layout)
+//int OvlWaitSync( OvlLayPg layout)
+int OvlWaitVSync()
 {
     uint32_t tmp=0;
 
-    if(LayValid(layout))
+    return ioctl(pOvl_priv->OvlFb[UILayer].fd, FBIO_WAITFORVSYNC, &tmp);
+/*    if(LayValid(layout))
     	return ioctl(FbByLay(layout)->fd, FBIO_WAITFORVSYNC, &tmp);
     else
     	return -1;
+    	*/
 }
 //--------------------------------------------------------------------------------
 int ovlclearbuf( ovlMemPgPtr PMemPg)
@@ -406,18 +432,23 @@ int OvlClrMemPg(OvlMemPgPtr PMemPg)
 	return ovlclearbuf( ToIntMemPg(PMemPg));
 }
 //--------------------------------------------------------------------
-int ovlUpdatePanelSize(void)
+int OvlGetPanelSize(uint32_t *Panel_w, uint32_t *Panel_h)
 {
 	SPanelSize psize;
 	int ret;
 
 	ret = ioctl(pOvl_priv->OvlFb[UILayer].fd, RK_FBIOGET_PANEL_SIZE, &psize);
 	if(!ret){
-		pOvl_priv->Panel_w = psize.size_x;
-		pOvl_priv->Panel_h = psize.size_y;
+		*Panel_w = psize.size_x;
+		*Panel_h = psize.size_y;
 	}
 
 	return ret;
+}
+//--------------------------------------------------------------------
+static int ovlUpdatePanelSize(void)
+{
+	return OvlGetPanelSize(&pOvl_priv->Panel_w, &pOvl_priv->Panel_h);
 }
 //-------------------------------------------------------------------
 uint32_t OvlVresByXres(uint32_t xres)
@@ -490,7 +521,7 @@ int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType format, uint32_t xres, uint
 #endif
 #ifdef IPP_ENABLE
     		case EMU1Layer_IPP:
-    			ovlIppInitReg( 0, 0, xres, yres, 0,
+    			ovlIppInitReg( 0, 0, xres, yres, pOvl_priv->OvlFb[UILayer].fix.smem_start,
     				pOvl_priv->OvlLay[EMU1Layer_IPP].var.xres_virtual, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
     			ovlIPPSetFormats(ovlFromHWRkFormat(pOvl_priv->OvlLay[UILayer].var.nonstd));
     			break;
@@ -521,8 +552,7 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h)
 #endif
 #ifdef IPP_ENABLE
     		case EMU1Layer_IPP:
-    			ovlIPPSetDrw(pOvl_priv->OvlFb[UILayer].fix.smem_start, Drw_w, Drw_h, Drw_x, Drw_y,
-    					pOvl_priv->OvlLay[UILayer].var.xres_virtual);
+    			ovlIPPSetDrw( Drw_w, Drw_h, Drw_x, Drw_y);
     			break;
 #endif
     		default:
@@ -540,13 +570,34 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h)
     return ret;
 }
 //----------------------------------------------------------------------------------
+#if defined(RGA_ENABLE) || defined(IPP_ENABLE)
+int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg)
+{
+
+	if(LayValid(layout)){
+		if(layout == EMU2Layer_RGA)
+			ovlRGASetDst(ToIntMemPg(DstMemPg)->phy_addr, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
+		else//IPP
+			ovlIPPSetDst(ToIntMemPg(DstMemPg)->phy_addr, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
+		return 0;
+    }
+
+    return -EINVAL;
+}
+#else
+int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg)
+{
+	return -EINVAL;
+}
+#endif
+//----------------------------------------------------------------------------------
 int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
 {
     int ret=-EINVAL;
     uint32_t tmp[2];
     ovlFbPtr PFb;
 
-    if(LayValidAndNotUI(layout)){
+    if(LayValid(layout)){
     	PFb = FbByLay(layout);
 
     	switch(layout){
@@ -566,6 +617,7 @@ int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
     		}
     		break;
 #endif
+//    	case UILayer:
     	default:
     		tmp[0] = ToIntMemPg(MemPg)->phy_addr;
     		tmp[1] = tmp[0] + ToIntMemPg(MemPg)->offset_uv;
@@ -585,7 +637,7 @@ int OvlFlipFb( OvlLayPg layout, OvlFbBufType flip, Bool clrPrev)
 {       
     int ret, prev=-1;
 
-    if(LayValidAndNotUI(layout)){
+    if(LayValid(layout)){
     	switch(flip){
     	case FRONT_FB:
     	case BACK_FB:
@@ -615,11 +667,13 @@ int OvlEnable( OvlLayPg layout, int enable, int vsync_en)
 {
 	int ret;
     if(LayValidAndNotUI(layout)){
-    	if(layout < EMU1Layer_IPP){
+    	if(layout >= EMU1Layer_IPP)
+    		ioctl(FbByLay(UILayer)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
+    	else{
     		ioctl(FbByLay(layout)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
     		ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_ENABLE, &enable);
-    	}else
-    		ret = 0;
+    	}
+    	ret = 0;
     }
     else
     	ret = -ENODEV;
@@ -628,7 +682,7 @@ int OvlEnable( OvlLayPg layout, int enable, int vsync_en)
     return ret;
 }
 //---------------------------------------------------------------------
-int ovlIsUsedAlloc( OvlLayPg layout)
+static int ovlIsUsedAlloc( OvlLayPg layout)
 {
     int ret, used=0;
 
@@ -656,7 +710,7 @@ int ovlIsUsedCheck( OvlLayPg layout)
 
 }
 //---------------------------------------------------------------------
-int ovlFreeUse( OvlLayPg layout)
+static int ovlFreeUse( OvlLayPg layout)
 {
 	return ovlUSIFreeRes(layout);
 }
@@ -704,11 +758,11 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     switch(type){
     case UI_L:
     case SCALE_L:
-//    case NOT_SCALEL:
+    case NOTSCALE_L:
     	for(lay=0;lay < MAX_OVERLAYs;lay++){
     		if(FbByLay(lay)->Type != type || ! pOvl_priv->OvlsAvl[lay])
     			continue;
-    		if( lay == EMU2Layer_RGA && OvlGetUIBpp() == 24)//IPP does not support 24 bit pixel
+    		if( lay == EMU1Layer_IPP && OvlGetUIBpp() == 24)//IPP does not support 24 bit pixel
     			continue;
    			if(!pOvl_priv->OvlLay[lay].InUse && !ovlIsUsedAlloc(lay))
    				break;
@@ -719,8 +773,8 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     			}*/
     	}
     	break;
-    case ANY_HW_L:
-    case ANY_L://except UIL
+    case ANY_HW_L://except UIL
+//    case ANY_L:
     	for(lay=0;lay < MAX_OVERLAYs;lay++){
     		if(FbByLay(lay)->Type == UI_L || ! pOvl_priv->OvlsAvl[lay])
     			continue;
@@ -732,10 +786,21 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     			break;
     	}
     	break;
-#if defined(IPP_ENABLE) || defined(RGA_ENABLE)
-    case EMU_L://loockup in reverse order RGA to UIL
+#if defined(IPP_ENABLE) || defined(RGA_ENABLE)//loockup in reverse order RGA to UIL
+    case ANY_EMU_L:
     	for(lay=MAX_OVERLAYs-1;lay > 0;lay--){
     		if(! pOvl_priv->OvlsAvl[lay])
+    			continue;
+    		if( lay == EMU1Layer_IPP && OvlGetUIBpp() == 24)//IPP does not support 24 bit pixel
+    			continue;
+   			if(!pOvl_priv->OvlLay[lay].InUse && !ovlIsUsedAlloc(lay))
+   				break;
+    	}
+    	break;
+    case EMU_SCALE_L:
+    case EMU_NOTSCALE_L:
+    	for(lay=MAX_OVERLAYs-1;lay > 0;lay--){
+    		if(FbByLay(lay)->Type != (type - EMU_L) || ! pOvl_priv->OvlsAvl[lay])
     			continue;
     		if( lay == EMU1Layer_IPP && OvlGetUIBpp() == 24)//IPP does not support 24 bit pixel
     			continue;
@@ -801,15 +866,6 @@ int OvlFreeLay( OvlLayPg layout)
 
     if(LayValid(layout)){
     	if(pOvl_priv->OvlLay[layout].InUse){
-    		OvlFreeMemPg(  pOvl_priv->OvlLay[layout].FbMemPgs[FRONT_FB]);
-    		pOvl_priv->OvlLay[layout].FbMemPgs[FRONT_FB] = NULL;
-    		OvlFreeMemPg(  pOvl_priv->OvlLay[layout].FbMemPgs[BACK_FB]);
-    		pOvl_priv->OvlLay[layout].FbMemPgs[BACK_FB] = NULL;
-    		MBufByLay(layout) = NULL;
-    		OvlEnable( layout, 0, 1);
-    		pOvl_priv->OvlLay[layout].InUse = FALSE;
-    		pOvl_priv->OvlLay[layout].ReqType = ERROR_L;
-    		ovlFreeUse(layout);
     		switch(layout){
 #ifdef RGA_ENABLE
     		case EMU2Layer_RGA:
@@ -821,9 +877,19 @@ int OvlFreeLay( OvlLayPg layout)
     			pOvl_priv->IPP_req.dst0.YrgbMst = 0;
     			break;
 #endif
-    		default:
+    		case UILayer:
+    			OvlFlipFb( layout, FRONT_FB, 0);
     			break;
     		}
+    		OvlFreeMemPg(  pOvl_priv->OvlLay[layout].FbMemPgs[FRONT_FB]);
+    		pOvl_priv->OvlLay[layout].FbMemPgs[FRONT_FB] = NULL;
+    		OvlFreeMemPg(  pOvl_priv->OvlLay[layout].FbMemPgs[BACK_FB]);
+    		pOvl_priv->OvlLay[layout].FbMemPgs[BACK_FB] = NULL;
+    		MBufByLay(layout) = NULL;
+    		OvlEnable( layout, 0, 1);
+    		pOvl_priv->OvlLay[layout].InUse = FALSE;
+    		pOvl_priv->OvlLay[layout].ReqType = ERROR_L;
+    		ovlFreeUse(layout);
     	}else
         	ret = -ENODEV;
     }else
@@ -918,7 +984,7 @@ void OvlUpdFbMod(struct fb_var_screeninfo *var)
 }
 
 //----------------------------------------------------------------------
-void set_ovl_param(Bool MasterMode)
+static void set_ovl_param(Bool MasterMode)
 {
     int i;
 
@@ -943,8 +1009,10 @@ void set_ovl_param(Bool MasterMode)
     		pOvl_priv->OvlFb[i].Type = SCALE_L;
     		break;
     	case EMU1Layer_IPP:
+    		pOvl_priv->OvlFb[i].Type = SCALE_L;
+    		break;
     	case EMU2Layer_RGA:
-    		pOvl_priv->OvlFb[i].Type = EMU_L;
+    		pOvl_priv->OvlFb[i].Type = NOTSCALE_L;
     		break;
     	default:
     		ERRMSG( "HW:Error indeterminate overlay type");
@@ -968,7 +1036,7 @@ void set_ovl_param(Bool MasterMode)
 }
 
 //------------------------------------------------------------------
-int ovl_setup_ovl()
+static int ovl_setup_ovl()
 {
     int i /*,ret=0*/;
 
@@ -1076,9 +1144,8 @@ int Open_RkLayers(Bool MasterMode)
 
 //    tmp = ret;
 
-    pOvl_priv->IPP_req.dst0.YrgbMst = 0;
-    pOvl_priv->RGA_req.dst.yrgb_addr = 0;
 #ifdef IPP_ENABLE
+    pOvl_priv->IPP_req.dst0.YrgbMst = 0;
     OVLDBG( "HW:Initialize IPP");
 //    if (!LoadKernelModule("rk29-ipp"))
 //    	OVLDBG( "can't load 'rk29-ipp' kernel module");
@@ -1092,6 +1159,7 @@ int Open_RkLayers(Bool MasterMode)
     }
 #endif
 #ifdef RGA_ENABLE
+    pOvl_priv->RGA_req.dst.yrgb_addr = 0;
     OVLDBG( "HW:Initialize RGA");
     pOvl_priv->OvlFb[EMU2Layer_RGA].fd = ovlInitRGAHW();
     if(pOvl_priv->OvlFb[EMU2Layer_RGA].fd < 0){

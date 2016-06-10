@@ -137,6 +137,7 @@ typedef struct {
 	struct rga_req	RGA_req;
 #endif
 #ifdef IPP_ENABLE
+	unsigned long	ipp_dst_addr;
 //	int				fd_IPP;
 	pthread_mutex_t	ippmutex;
 	struct rk29_ipp_req	IPP_req;
@@ -174,8 +175,9 @@ int ovlIppBlit();
 void ovlIppInitReg( uint32_t SrcYAddr, int SrcFrmt, int Src_w, int Src_h,
 		uint32_t DstYAddr, int Src_vir, int Dst_vir);
 void ovlIPPSetFormats(OvlLayoutFormatType format);
-void ovlIPPSetDrw(uint32_t DstYAddr, int Drw_w, int Drw_h, int Drw_x, int Drw_y, int Dst_vir);
+void ovlIPPSetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y);
 void ovlIPPSetSrc(uint32_t SrcYAddr);
+void ovlIPPSetDst(uint32_t DstYAddr, int Dst_vir);
 #endif
 
 #ifdef RGA_ENABLE
@@ -186,6 +188,7 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
 void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode);
 void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y);
 void ovlRGASetSrc(uint32_t SrcYAddr);
+void ovlRGASetDst(uint32_t DstYAddr, int Dst_vir);
 #endif
 
 #endif

@@ -62,6 +62,7 @@ void ovlIppInitReg(uint32_t SrcYAddr, int SrcFrmt, int Src_w, int Src_h,
     pOvl_priv->IPP_req.src0.YrgbMst = SrcYAddr;
 //    IPP_req.src0.CbrMst = SrcUVAddr;
     pOvl_priv->IPP_req.dst0.YrgbMst = DstYAddr;
+    pOvl_priv->ipp_dst_addr = DstYAddr;
 //    IPP_req.dst0.CbrMst = DstUVAddr;
     pOvl_priv->IPP_req.dst0.w = pOvl_priv->IPP_req.src0.w;
     pOvl_priv->IPP_req.dst0.h = pOvl_priv->IPP_req.src0.h;
@@ -103,7 +104,7 @@ void ovlIPPSetFormats(OvlLayoutFormatType format)
 	pOvl_priv->IPP_req.dst0.fmt = IPP_mode;
 }
 //--------------------------------------------------------------------------------
-void ovlIPPSetDrw(uint32_t DstYAddr, int Drw_w, int Drw_h, int Drw_x, int Drw_y, int Dst_vir)
+void ovlIPPSetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y)
 {
 	uint32_t adr_offs;
 
@@ -111,25 +112,33 @@ void ovlIPPSetDrw(uint32_t DstYAddr, int Drw_w, int Drw_h, int Drw_x, int Drw_y,
     pOvl_priv->IPP_req.dst0.h = Drw_h;
     switch(pOvl_priv->IPP_req.src0.fmt){
     case IPP_RGB_565:
-    	adr_offs = ((Drw_y*Dst_vir+Drw_x)<<1);
+    	adr_offs = ((Drw_y*pOvl_priv->IPP_req.dst_vir_w+Drw_x)<<1);
     	break;
 //    case IPP_XRGB_8888:
     default:
-    	adr_offs = ((Drw_y*Dst_vir+Drw_x)<<2);
+    	adr_offs = ((Drw_y*pOvl_priv->IPP_req.dst_vir_w+Drw_x)<<2);
 
 /*	IPP_mode = IPP_Y_CBCR_H2V2;//nearest suitable
 	IPP_mode = IPP_Y_CBCR_H2V1;//nearest suitable
 	IPP_mode = IPP_Y_CBCR_H2V2;
 	IPP_mode = IPP_Y_CBCR_H2V1;*/
     }
-    OVLDBG("fmt:%d DstYAddr:0x%X  adr_offs:%d",pOvl_priv->IPP_req.src0.fmt,DstYAddr,adr_offs);
-    pOvl_priv->IPP_req.dst0.YrgbMst = DstYAddr + adr_offs;
+    OVLDBG("fmt:%d DstYAddr:0x%X  adr_offs:%d",pOvl_priv->IPP_req.src0.fmt,pOvl_priv->ipp_dst_addr,adr_offs);
+    pOvl_priv->IPP_req.dst0.YrgbMst = pOvl_priv->ipp_dst_addr + adr_offs;
 }
 //--------------------------------------------------------------------------------
 void ovlIPPSetSrc(uint32_t SrcYAddr)
 {
 	pOvl_priv->IPP_req.src0.YrgbMst = SrcYAddr;
 	//    IPP_req.src0.CbrMst = SrcUVAddr;
+}
+//--------------------------------------------------------------------------------
+void ovlIPPSetDst(uint32_t DstYAddr, int Dst_vir)
+{
+    pOvl_priv->IPP_req.dst0.YrgbMst = DstYAddr;
+    pOvl_priv->ipp_dst_addr = DstYAddr;
+    if(Dst_vir)
+    	pOvl_priv->IPP_req.dst_vir_w = Dst_vir;
 }
 /*
 static int ovlcopyhwbufscale(ScrnInfoPtr pScrn,

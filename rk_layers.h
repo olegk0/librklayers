@@ -52,14 +52,17 @@ typedef enum {
     RKL_FORMAT_YCrCb_444 = 70, //yuv444 34
 } OvlLayoutFormatType;
 
+#define EMU_L 9	//for usability
 typedef enum {
-    ERROR_L=-1,
-    UI_L=0,
-    SCALE_L=1,
-//    NOT_SCALEL=2,
-	ANY_HW_L =3,
-	EMU_L = 4, //IPP RGA based pseudo layers
-    ANY_L =6,
+	ERROR_L=-1,
+	UI_L=0,
+	ANY_L = 1,
+	ANY_HW_L = ANY_L,					//preferably any hardware layer
+	SCALE_L= 3,							//scalable, preferably hardware layer
+	NOTSCALE_L= 4,						//not scalable, preferably hardware layer
+	ANY_EMU_L = ANY_HW_L + EMU_L,			//preferably any emulated layer
+	EMU_SCALE_L = SCALE_L + EMU_L,			//scalable, preferably pseudo layer (IPP based)
+	EMU_NOTSCALE_L = NOTSCALE_L + EMU_L,	//not scalable, preferably pseudo layer (RGA based)
 } OvlLayoutType;
 
 typedef enum
@@ -96,12 +99,7 @@ void OvlCopyNV12SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void
 		int dstPitch, int srcPitch, int w, int h);
 void OvlCopyNV16SemiPlanarToFb(OvlMemPgPtr PMemPg, const void *src_Y, const void *src_UV,
 		int dstPitch, int srcPitch, int w, int h);
-
-//int OvlSetModeFb(OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayoutFormatType format);
 int OvlResetFB(OvlLayPg layout);
-/*int OvlCopyHWBufCF(uint32_t SrcYAddr, uint32_t SrcUVAddr, uint32_t SrcVAddr,
-				int SrcFrmt, int DstFrmt, uint32_t DstYAddr,
-				int Drw_w, int Drw_h, int Drw_x, int Drw_y, int Src_vir, int Dst_vir, Bool useMMU);*/
 //-------------------------------------------------------------
 OvlMemPgPtr OvlGetBufByLay(OvlLayPg layout, OvlFbBufType BufType);
 uint32_t OvlGetVXresByLay(OvlLayPg layout);
@@ -112,11 +110,11 @@ uint32_t OvlGetXresByLay( OvlLayPg layout);
 uint32_t OvlGetYresByLay( OvlLayPg layout);
 int OvlGetBppByLay(OvlLayPg layout);
 uint32_t OvlVresByXres(uint32_t xres);
+uint32_t OvlGetFbSizeByLay( OvlLayPg layout);
+int OvlGetPanelSize(uint32_t *Panel_w, uint32_t *Panel_h);
 //-------------------------------------------------------------
-int OvlWaitSync( OvlLayPg layout);
-//int OvlCpBufToDisp(OvlMemPgPtr PMemPg, OvlLayPg layout);
+int OvlWaitVSync();
 int OvlFlipFb(OvlLayPg layout, OvlFbBufType flip, Bool clrPrev);
-//int Ovl2dBlt(uint32_t *src_bits, uint32_t *dst_bits, int src_stride, int dst_stride, int src_bpp, int dst_bpp, int src_x, int src_y, int dst_x, int dst_y, int w, int h);
 //-------------------------------------------------------------
 int OvlSetColorKey(uint32_t color);
 int OvlEnable( OvlLayPg layout, int enable, int vsync_en);
@@ -134,5 +132,6 @@ OvlLayPg OvlAllocLay(OvlLayoutType type, OvlFbBufAllocType FbBufAlloc);
 int OvlFreeLay(OvlLayPg layout);
 OvlMemPgPtr OvlAllocMemPg(uint32_t size, uint32_t YUV_offset);
 int OvlFreeMemPg(OvlMemPgPtr PMemPg);
+int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg);
 
 #endif

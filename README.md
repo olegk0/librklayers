@@ -1,4 +1,4 @@
-# rk layers library v0.5
+# rk layers library v0.6
 
 For xf86-video-rkfb v0.8.0
 

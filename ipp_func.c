@@ -18,6 +18,26 @@
 
 #include "rk_layers_priv.h"
 
+//#define DEBUGIPP
+
+#ifdef DEBUGIPP
+void DdgPrintIPP( struct rk29_ipp_req *IPP_req)
+{
+    OVLDBG("src_vir_w:%d",IPP_req->src_vir_w);
+    OVLDBG("src0.fmt:%d",IPP_req->src0.fmt);
+    OVLDBG("srcYrgbMst:%X",IPP_req->src0.YrgbMst);
+	OVLDBG("src0.h:%d",IPP_req->src0.h);
+	OVLDBG("src0.w:%d\n",IPP_req->src0.w);
+
+    OVLDBG("dst_vir_w:%d",IPP_req->dst_vir_w);
+    OVLDBG("dst0.fmt:%d",IPP_req->dst0.fmt);
+    OVLDBG("dstYrgbMst:%X",IPP_req->dst0.YrgbMst);
+	OVLDBG("dst0.h:%d",IPP_req->dst0.h);
+	OVLDBG("dst0.w:%d\n",IPP_req->dst0.w);
+
+	OVLDBG("flag:%d",IPP_req->flag);
+}
+#endif
 //++++++++++++++++++++++++++++++++++++IPP++++++++++++++++++++++++++++++++++++++++++
 int ovlInitIPPHW()
 {
@@ -28,6 +48,9 @@ int ovlIppBlit()
 {
     int ret, timeout = 0;
 
+#ifdef DEBUGIPP
+    DdgPrintIPP(&pOvl_priv->IPP_req);
+#endif
     while(pthread_mutex_trylock(&pOvl_priv->ippmutex) ==  EBUSY){
 	timeout++;
 	if(timeout > HW_TIMEOUT){
@@ -140,68 +163,3 @@ void ovlIPPSetDst(uint32_t DstYAddr, int Dst_vir)
     if(Dst_vir)
     	pOvl_priv->IPP_req.dst_vir_w = Dst_vir;
 }
-/*
-static int ovlcopyhwbufscale(ScrnInfoPtr pScrn,
-				unsigned int SrcYAddr, unsigned int SrcUVAddr, int SrcFrmt,
-				unsigned int DstYAddr, unsigned int DstUVAddr,
-				int Src_w, int Src_h, int Drw_w, int Drw_h, int Src_vir, int Dst_vir)
-{
-    FBDevPtr pMxv = FBDEVPTR(pScrn);
-    OvlHWPtr overlay = pMxv->OvlHW;
-    struct rk29_ipp_req ipp_req;
-    int ret, timeout = 0;
-
-    while(pthread_mutex_trylock(&overlay->ippmutex) ==  EBUSY){
-	timeout++;
-	if(timeout > HW_TIMEOUT) return -1;
-    }
-
-    memset(&ipp_req, 0, sizeof(struct rk29_ipp_req));
-
-    ipp_req.src0.w = Src_w;
-    ipp_req.src0.h = Src_h;
-    ipp_req.src_vir_w = Src_vir;
-
-//IPP_XRGB_8888
-    ipp_req.src0.fmt = SrcFrmt;
-    ipp_req.dst0.fmt = ipp_req.src0.fmt;
-    ipp_req.dst_vir_w = Dst_vir;
-    ipp_req.timeout = 100;
-    ipp_req.flag = IPP_ROT_0;
-
-    ipp_req.src0.YrgbMst = SrcYAddr;
-    ipp_req.src0.CbrMst = SrcUVAddr;
-    ipp_req.dst0.YrgbMst = DstYAddr;
-    ipp_req.dst0.CbrMst = DstUVAddr;
-    ipp_req.dst0.w = ipp_req.src0.w;
-    ipp_req.dst0.h = ipp_req.src0.h;
-
-    ret = IppBlit(pScrn, &ipp_req);
-    pthread_mutex_unlock(&overlay->ippmutex);
-    return ret;
-}
-//--------------------------------------------------------------------------------
-int OvlPutBufToSrcn(ScrnInfoPtr pScrn, unsigned int SrcBuf, int Src_vir,
-				int Drw_w, int Drw_h, int Drw_x, int Drw_y, int pa_code)
-{
-    FBDevPtr pMxv = FBDEVPTR(pScrn);
-    OvlHWPtr overlay = pMxv->OvlHW;
-
-//ErrorF("-----Enter===SrcBuf:%X RGA_mode:%d Drw_w:%d Drw_h:%d Drw_x:%d Drw_y:%d Src_vir:%d Dst_vir:%d  pa_l:%d pa_in:%d\n",
-//    SrcBuf, overlay->RGA_mode, Drw_w, Drw_h, Drw_x, Drw_y, Src_vir, overlay->var.xres_virtual ,overlay->rga_pa ,pa_code);
-
-    if(overlay->rga_pa == 0){
-	overlay->rga_pa = 1;
-    }
-    else
-	if(overlay->rga_pa != pa_code){
-	    ovlcopyhwbufscale(pScrn, SrcBuf, 0, overlay->IPP_mode,
-		overlay->phadr_mem[0]+((Drw_y*overlay->var.xres_virtual+Drw_x)<<2), 0,
-		Drw_w, Drw_h, Drw_w, Drw_h, Src_vir, overlay->var.xres_virtual);
-	    return 0;
-	}
-    ovlcopyhwbufchfrmt(pScrn, SrcBuf, 0, 0, overlay->RGA_mode, overlay->RGA_mode,
-	overlay->phadr_mem[0], Drw_w, Drw_h, Drw_x, Drw_y, Src_vir, overlay->var.xres_virtual);
-    return 1;
-}
-*/

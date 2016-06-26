@@ -22,8 +22,12 @@
 
 #include <linux/fb.h>
 
-#define VERSION_MAJOR  0
-#define VERSION_MINOR  5
+#define MAX_PANEL_SIZE_X 1920
+//#define PANEL_SIZE_X 1280
+#define MAX_PANEL_SIZE_Y 1080
+//#define PANEL_SIZE_Y 720
+
+#define FB_MAXPGSIZE MAX_PANEL_SIZE_X*MAX_PANEL_SIZE_Y*4
 
 #ifndef Bool
 typedef int Bool;
@@ -133,5 +137,12 @@ int OvlFreeLay(OvlLayPg layout);
 OvlMemPgPtr OvlAllocMemPg(uint32_t size, uint32_t YUV_offset);
 int OvlFreeMemPg(OvlMemPgPtr PMemPg);
 int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg);
+
+int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size, uint32_t *yuv_offs);
+int OvlCacheFreeBlock(OvlLayPg layout);
+int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **PutFbMapAddr);
+int OvlCacheStart(OvlLayPg layout, unsigned int delay_us);
+int OvlCacheStop(OvlLayPg layout);
+int OvlCacheGetStat(OvlLayPg layout);
 
 #endif

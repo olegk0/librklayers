@@ -105,7 +105,6 @@ static int LoadKernelModule(const char *modName)
     /* never get here */
     return 0;
 }
-
 //--------------------------------------------------------------------------------
 int OvlSetHDMI(int xres,int yres)
 {
@@ -165,6 +164,149 @@ int OvlSetHDMI(int xres,int yres)
 	}
 
     return ret;
+}
+//---------------------------------------------------------------------
+int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size, uint32_t *yuv_offs)
+{
+	int ret,i;
+	void *MemMap=NULL;
+	uint32_t all_size;
+
+    if(LayHWValid(layout)){
+    	for(i=max_cnt;i>min_cnt;i--){
+    		all_size = (i*size + PAGE_MASK) & ~PAGE_MASK;
+    		pOvl_priv->CacheMemPg = OvlAllocMemPg(all_size, 0);
+    	   	if(pOvl_priv->CacheMemPg)
+    	   		break;
+    	}
+
+    	if(!pOvl_priv->CacheMemPg){
+    		OVLDBG("Do not alloc memory for cache");
+    		return -ENOMEM;
+    	}
+
+    	pOvl_priv->cache_mem_maps = calloc(i+1, sizeof(uint32_t));
+    	if(!pOvl_priv->cache_mem_maps){
+    		ret = -ENOMEM;
+    		goto err;
+    	}
+
+    	MemMap = OvlMapBufMem(pOvl_priv->CacheMemPg);
+    	if(!MemMap){
+    		ret = -ENOMEM;
+    		goto err;
+    	}
+
+    	all_size = ToIntMemPg(pOvl_priv->CacheMemPg)->buf_size / i;
+
+    	pOvl_priv->cache_page_params.first_paddr = ToIntMemPg(pOvl_priv->CacheMemPg)->phy_addr;
+    	pOvl_priv->cache_page_params.size_blk = all_size;
+    	pOvl_priv->cache_page_params.yuv_offs = ((all_size / 2 ));//+ PAGE_MASK) & ~PAGE_MASK);
+		if(yuv_offs){
+			if(*yuv_offs)
+				pOvl_priv->cache_page_params.yuv_offs = *yuv_offs;
+			else
+				*yuv_offs = pOvl_priv->cache_page_params.yuv_offs;
+		}
+
+		pOvl_priv->cache_page_params.num_blk = 0;
+		ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_INIT, &pOvl_priv->cache_page_params);
+
+    	pOvl_priv->cache_page_params.num_blk = i;
+   		ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_INIT, &pOvl_priv->cache_page_params);
+
+   		if(ret){
+   			OVLDBG("ioctl RK_FBIOSET_CACHE_INIT ret:%d", ret);
+   			goto err;
+   		}
+   		for(i=0;i<pOvl_priv->cache_page_params.num_blk;i++)
+   			pOvl_priv->cache_mem_maps[i] = MemMap + pOvl_priv->cache_page_params.size_blk*i;
+    }
+    else
+    	ret = -ENODEV;
+    OVLDBG("layout:%d min_cnt:%d max_cnt:%d size:%d num_blk:%d paddr:%lX MemMap:%p ret:%d", layout, min_cnt, max_cnt, size, pOvl_priv->cache_page_params.num_blk, pOvl_priv->cache_page_params.first_paddr,MemMap, ret);
+
+    return 0;
+err:
+	OvlFreeMemPg(pOvl_priv->CacheMemPg);
+	pOvl_priv->CacheMemPg = NULL;
+	if(pOvl_priv->cache_mem_maps)
+		MFREE(pOvl_priv->cache_mem_maps);
+	return ret;
+}
+//-----------------------------------------------------------------
+int OvlCacheFreeBlock(OvlLayPg layout)
+{
+	int ret;
+
+	if(!LayHWValid(layout))
+		return -ENODEV;
+
+	pOvl_priv->cache_page_params.num_blk = 0;
+	ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_INIT, &pOvl_priv->cache_page_params);
+
+	if(pOvl_priv->CacheMemPg){
+		OvlFreeMemPg(pOvl_priv->CacheMemPg);
+		pOvl_priv->CacheMemPg = NULL;
+	}
+
+	if(pOvl_priv->cache_mem_maps){
+		MFREE(pOvl_priv->cache_mem_maps);
+	}
+
+	return ret;
+}
+//-----------------------------------------------------------------
+int OvlCacheGetStat(OvlLayPg layout)
+{
+	int ret;
+
+	if(!LayHWValid(layout) || !pOvl_priv->CacheMemPg )
+		return -ENODEV;
+
+	if(ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_STAT, &ret))
+		return -EINVAL;
+	else
+		return ret;
+}
+//-----------------------------------------------------------------
+int OvlCacheStart(OvlLayPg layout, unsigned int delay_us)
+{
+	if(!LayHWValid(layout) || !pOvl_priv->CacheMemPg )
+		return -ENODEV;
+
+	if(pOvl_priv->CacheMemPg)
+		return ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_CTRL, &delay_us);
+	else
+		return -EFAULT;
+}
+//-----------------------------------------------------------------
+int OvlCacheStop(OvlLayPg layout)
+{
+	unsigned int delay_us=0;
+
+//	if(!LayHWValid(layout) || !pOvl_priv->CacheMemPg )
+	if(!LayHWValid(layout))
+		return -ENODEV;
+
+	return ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_CTRL, &delay_us);
+}
+//-----------------------------------------------------------------
+int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **PutFbMapAddr)
+{
+	int ret;
+	cache_put_prm_t cache_put_prm;
+
+	 if(!LayHWValidAndNotUI(layout) || !pOvl_priv->CacheMemPg )
+		 return -ENODEV;
+
+	 if(!pOvl_priv->CacheMemPg || !ToIntMemPg(pOvl_priv->CacheMemPg)->fb_mmap)
+		 return -EINVAL;
+
+	 ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_GPUT, &cache_put_prm);
+	 *PutFbPhyAddr = cache_put_prm.PutFbPaddr;
+	 *PutFbMapAddr = pOvl_priv->cache_mem_maps[cache_put_prm.NBlk];
+	 return ret;
 }
 //-----------------------------------------------------------------
 static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
@@ -835,7 +977,6 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
     		if(!pOvl_priv->OvlLay[lay].FbMemPgs[FRONT_FB])
     			goto err;
 
-    		OvlFlipFb( lay, FRONT_FB, 0);
 //and back fb if needed
     		if(FbBufAlloc > ALC_FRONT_FB && !pOvl_priv->OvlLay[lay].FbMemPgs[BACK_FB]){
     			pOvl_priv->OvlLay[lay].FbMemPgs[BACK_FB] = OvlAllocMemPg( pOvl_priv->MaxPgSize, 0);//TODO size
@@ -847,6 +988,7 @@ OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
         			goto err;
         		}
     		}
+    		OvlFlipFb( lay, FRONT_FB, 0);
     	}
 		pOvl_priv->OvlLay[lay].InUse = TRUE;
 		pOvl_priv->OvlLay[lay].ReqType = type;
@@ -1210,6 +1352,9 @@ void Close_RkLayers()
     			close(pOvl_priv->OvlFb[i].fd);
     		}
     	}
+
+    	if(pOvl_priv->CacheMemPg)
+    		OvlCacheFreeBlock(UILayer);
 
     	if(pOvl_priv->fd_USI > 0)
     		close(pOvl_priv->fd_USI);

@@ -22,6 +22,9 @@
 
 #define HW_TIMEOUT 100
 
+#define VERSION_MAJOR  0
+#define VERSION_MINOR  6
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -47,6 +50,7 @@
 #include "rk3066.h"
 #include <stdio.h>
 #include "chroma_neon.h"
+#include "out_cache_defs.h"
 
 /*#define RGA_ENABLE 1
 #define IPP_ENABLE 1
@@ -131,6 +135,9 @@ typedef struct {
 	int				OvlsCnt;
 	uint32_t		Panel_w;
 	uint32_t		Panel_h;
+	cache_page_prm_t cache_page_params;
+	uint32_t		**cache_mem_maps;
+	OvlMemPgPtr		CacheMemPg;
 #ifdef RGA_ENABLE
 //	int				fd_RGA;
 	pthread_mutex_t	rgamutex;

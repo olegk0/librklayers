@@ -136,7 +136,7 @@ typedef struct {
 	uint32_t		Panel_w;
 	uint32_t		Panel_h;
 	cache_page_prm_t cache_page_params;
-	uint32_t		**cache_mem_maps;
+	uint32_t		*cache_mem_maps[MAX_CACHE_PAGES];
 	OvlMemPgPtr		CacheMemPg;
 #ifdef RGA_ENABLE
 //	int				fd_RGA;

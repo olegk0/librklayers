@@ -172,6 +172,9 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
 	void *MemMap=NULL;
 	uint32_t all_size;
 
+	if(max_cnt > MAX_CACHE_PAGES)
+		return -EINVAL;
+
     if(LayHWValid(layout)){
     	for(i=max_cnt;i>min_cnt;i--){
     		all_size = (i*size + PAGE_MASK) & ~PAGE_MASK;
@@ -183,12 +186,6 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
     	if(!pOvl_priv->CacheMemPg){
     		OVLDBG("Do not alloc memory for cache");
     		return -ENOMEM;
-    	}
-
-    	pOvl_priv->cache_mem_maps = calloc(i+1, sizeof(uint32_t));
-    	if(!pOvl_priv->cache_mem_maps){
-    		ret = -ENOMEM;
-    		goto err;
     	}
 
     	MemMap = OvlMapBufMem(pOvl_priv->CacheMemPg);
@@ -223,15 +220,15 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
    			pOvl_priv->cache_mem_maps[i] = MemMap + pOvl_priv->cache_page_params.size_blk*i;
     }
     else
-    	ret = -ENODEV;
+    	return -ENODEV;
+
     OVLDBG("layout:%d min_cnt:%d max_cnt:%d size:%d num_blk:%d paddr:%lX MemMap:%p ret:%d", layout, min_cnt, max_cnt, size, pOvl_priv->cache_page_params.num_blk, pOvl_priv->cache_page_params.first_paddr,MemMap, ret);
 
-    return 0;
+    return pOvl_priv->cache_page_params.num_blk;
 err:
 	OvlFreeMemPg(pOvl_priv->CacheMemPg);
 	pOvl_priv->CacheMemPg = NULL;
-	if(pOvl_priv->cache_mem_maps)
-		MFREE(pOvl_priv->cache_mem_maps);
+
 	return ret;
 }
 //-----------------------------------------------------------------
@@ -248,10 +245,6 @@ int OvlCacheFreeBlock(OvlLayPg layout)
 	if(pOvl_priv->CacheMemPg){
 		OvlFreeMemPg(pOvl_priv->CacheMemPg);
 		pOvl_priv->CacheMemPg = NULL;
-	}
-
-	if(pOvl_priv->cache_mem_maps){
-		MFREE(pOvl_priv->cache_mem_maps);
 	}
 
 	return ret;

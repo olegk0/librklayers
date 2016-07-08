@@ -177,7 +177,7 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
 
     if(LayHWValid(layout)){
     	for(i=max_cnt;i>min_cnt;i--){
-    		all_size = ((size + PAGE_MASK)*i) & ~PAGE_MASK;
+    		all_size = ((size + PAGE_MASK)*i)/* & ~PAGE_MASK*/;
     		pOvl_priv->CacheMemPg = OvlAllocMemPg(all_size, 0);
     	   	if(pOvl_priv->CacheMemPg)
     	   		break;
@@ -217,7 +217,7 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
    			goto err;
    		}
    		for(i=0;i<pOvl_priv->cache_page_params.num_blk;i++)
-   			pOvl_priv->cache_mem_maps[i] = MemMap + pOvl_priv->cache_page_params.size_blk*i;
+   			pOvl_priv->cache_mem_maps[i] = ((MemMap + PAGE_MASK) & ~PAGE_MASK) + pOvl_priv->cache_page_params.size_blk*i;
     }
     else
     	return -ENODEV;

@@ -177,7 +177,7 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
 
     if(LayHWValid(layout)){
     	for(i=max_cnt;i>min_cnt;i--){
-    		all_size = (i*size + PAGE_MASK) & ~PAGE_MASK;
+    		all_size = ((size + PAGE_MASK)*i) & ~PAGE_MASK;
     		pOvl_priv->CacheMemPg = OvlAllocMemPg(all_size, 0);
     	   	if(pOvl_priv->CacheMemPg)
     	   		break;
@@ -194,11 +194,11 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
     		goto err;
     	}
 
-    	all_size = ToIntMemPg(pOvl_priv->CacheMemPg)->buf_size / i;
+    	all_size = ((ToIntMemPg(pOvl_priv->CacheMemPg)->buf_size / i) + PAGE_MASK) & ~PAGE_MASK;
 
-    	pOvl_priv->cache_page_params.first_paddr = ToIntMemPg(pOvl_priv->CacheMemPg)->phy_addr;
+    	pOvl_priv->cache_page_params.first_paddr = (ToIntMemPg(pOvl_priv->CacheMemPg)->phy_addr + PAGE_MASK) & ~PAGE_MASK;
     	pOvl_priv->cache_page_params.size_blk = all_size;
-    	pOvl_priv->cache_page_params.yuv_offs = ((all_size / 2 ));//+ PAGE_MASK) & ~PAGE_MASK);
+    	pOvl_priv->cache_page_params.yuv_offs = ((all_size / 2 )+ PAGE_MASK) & ~PAGE_MASK;
 		if(yuv_offs){
 			if(*yuv_offs)
 				pOvl_priv->cache_page_params.yuv_offs = *yuv_offs;
@@ -1268,6 +1268,7 @@ int Open_RkLayers(Bool MasterMode)
     	MFREE(pOvl_priv);
     	return -ENODEV;
     }
+    OVLDBG( "fd_USI:%d",pOvl_priv->fd_USI);
 
     OVLDBG( "HW:Initialize overlays");
 

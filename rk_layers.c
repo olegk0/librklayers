@@ -216,8 +216,9 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
    			OVLDBG("ioctl RK_FBIOSET_CACHE_INIT ret:%d", ret);
    			goto err;
    		}
+   		all_size = ToIntMemPg(pOvl_priv->CacheMemPg)->phy_addr - pOvl_priv->cache_page_params.first_paddr;
    		for(i=0;i<pOvl_priv->cache_page_params.num_blk;i++)
-   			pOvl_priv->cache_mem_maps[i] = ((MemMap + PAGE_MASK) & ~PAGE_MASK) + pOvl_priv->cache_page_params.size_blk*i;
+   			pOvl_priv->cache_mem_maps[i] = MemMap + all_size + pOvl_priv->cache_page_params.size_blk*i;
     }
     else
     	return -ENODEV;

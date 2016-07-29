@@ -1241,14 +1241,14 @@ err:
 //------------------------------------------------------------------
 uint32_t OvlGetVersion()
 {
-	return (VERSION_MAJOR << 8) | VERSION_MINOR;
+	return (VERSION_MAJOR << 16) | (VERSION_MINOR << 8) | VERSION_BUILD;
 }
 //----------------------------main init--------------------------
 int Open_RkLayers(Bool MasterMode)
 {
 	int ret=0;//, tmp=1;
 
-	OVLDBG("version:%d.%d",VERSION_MAJOR,VERSION_MINOR);
+	OVLDBG("version:%d.%d-%d",VERSION_MAJOR,VERSION_MINOR,VERSION_BUILD);
 
 	pOvl_priv = calloc(1, sizeof(OvlHWRec));
 	if(!pOvl_priv){

@@ -24,7 +24,7 @@
 
 #define VERSION_MAJOR  0
 #define VERSION_MINOR  7
-#define VERSION_BUILD  2
+#define VERSION_BUILD  4
 
 #include <stdlib.h>
 #include <stdint.h>

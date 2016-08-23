@@ -56,7 +56,7 @@
 /*#define RGA_ENABLE 1
 #define IPP_ENABLE 1
 */
-#define DEBUG 1
+//#define DEBUG 1
 
 #ifdef DEBUG
 #define OVLDBG(format, args...)		fprintf(stderr, "RK_LAY(%s):" format "\n", __func__, ## args)

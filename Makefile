@@ -14,11 +14,13 @@ SRCS += rga_func.c
 endif
 
 ifeq ($(DEBUG),y)
-DEFINES += -DDEBUG
+DEFINES += -g -O0 -DDEBUG
+else
+DEFINES += -O3
 endif
 
 INCLUDES = -I./include
-CFLAGS = -fPIC -Wall -Wextra -O2 -g $(INCLUDES) $(DEFINES)
+CFLAGS = -fPIC -Wall -Wextra $(INCLUDES) $(DEFINES)
 LDFLAGS = -shared -lUMP -lpthread
 
 INSTALL_DIR = /usr/lib/

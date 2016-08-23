@@ -206,10 +206,10 @@ int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size,
 				*yuv_offs = pOvl_priv->cache_page_params.yuv_offs;
 		}
 
-		pOvl_priv->cache_page_params.num_blk = 0;
+/*		pOvl_priv->cache_page_params.num_blk = 0;//TODO
 		ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_INIT, &pOvl_priv->cache_page_params);
-
-    	pOvl_priv->cache_page_params.num_blk = i;
+*/
+		pOvl_priv->cache_page_params.num_blk = i;
    		ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_CACHE_INIT, &pOvl_priv->cache_page_params);
 
    		if(ret){
@@ -1131,7 +1131,7 @@ static void set_ovl_param(Bool MasterMode)
 
     	pOvl_priv->OvlLay[i].InUse = FALSE;
     	pOvl_priv->OvlLay[i].ReqType = ERROR_L;
-    		//    	pOvl_priv->OvlLay[i].ResChange = FALSE;
+
     	pOvl_priv->OvlLay[i].FbBufUsed = FRONT_FB;
     	pOvl_priv->OvlLay[i].FbMemPgs[FRONT_FB] = NULL;
     	pOvl_priv->OvlLay[i].FbMemPgs[BACK_FB] = NULL;
@@ -1163,7 +1163,6 @@ static void set_ovl_param(Bool MasterMode)
     		if(MasterMode){
     			OvlEnable( i, 0, 1);
     		}
-//    	else{
     		ovlIsUsedCheck(i);// deactivate nonused layers
     	}
 
@@ -1174,7 +1173,7 @@ static void set_ovl_param(Bool MasterMode)
 //------------------------------------------------------------------
 static int ovl_setup_ovl()
 {
-    int i /*,ret=0*/;
+    int i;
 
     pOvl_priv->OvlsCnt = 0;
 
@@ -1183,9 +1182,7 @@ static int ovl_setup_ovl()
 
     pOvl_priv->OvlFb[UILayer].fd = open(FB_DEV_UI, O_RDWR);
     if (pOvl_priv->OvlFb[UILayer].fd < 0){
-//    	ret = pOvl_priv->OvlFb[UILayer].fd;
     	ERRMSG( "HW:Error open FB_DEV_UI");
-//    	goto err;
     	return pOvl_priv->OvlFb[UILayer].fd;
     }
     pOvl_priv->OvlsCnt++;
@@ -1193,9 +1190,7 @@ static int ovl_setup_ovl()
 
     pOvl_priv->OvlFb[Ovl1Layer].fd = open(FB_DEV_O1, O_RDONLY); //main Ovl_priv
     if (pOvl_priv->OvlFb[Ovl1Layer].fd < 0){
-//    	ret = pOvl_priv->OvlFb[Ovl1Layer].fd;
     	ERRMSG( "HW:Error open FB_DEV_O1");
-//    	goto err1;
     }else{
     	pOvl_priv->OvlsCnt++;
     	pOvl_priv->OvlsAvl[Ovl1Layer]=TRUE;
@@ -1203,9 +1198,7 @@ static int ovl_setup_ovl()
 
     pOvl_priv->OvlFb[Ovl2Layer].fd = open(FB_DEV_O2, O_RDONLY);
     if (pOvl_priv->OvlFb[Ovl2Layer].fd < 0){
-//    	ret = pOvl_priv->OvlFb[Ovl2Layer].fd;
-    	ERRMSG( "HW:Error open FB_DEV_O2");
-//    	goto err2;
+    	OVLDBG( "HW:Error open FB_DEV_O2");
     }
     else{
     	pOvl_priv->OvlsCnt++;
@@ -1218,25 +1211,7 @@ static int ovl_setup_ovl()
 
     ioctl(pOvl_priv->OvlFb[UILayer].fd, FBIOGET_VSCREENINFO, &pOvl_priv->cur_var);
 
-//	ioctl(pOvl_priv->fd_o1, FBIOBLANK, FB_BLANK_UNBLANK);
-/*	tmp=1;
-	ioctl(pOvl_priv->OvlFb[UILayer].fd, RK_FBIOSET_OVERLAY_STATE, &tmp);
-        return(TRUE);
-    }
-*/
     return 0;
-/*
-    close(pOvl_priv->OvlFb[Ovl2Layer].fd);
-    pOvl_priv->OvlFb[Ovl2Layer].fd = 0;
-err2:
-    close(pOvl_priv->OvlFb[UILayer].fd);
-    pOvl_priv->OvlFb[UILayer].fd = 0;
-err1:
-    close(pOvl_priv->OvlFb[Ovl1Layer].fd);
-    pOvl_priv->OvlFb[Ovl1Layer].fd = 0;
-err:
-    return ret;
-    */
 }
 //------------------------------------------------------------------
 uint32_t OvlGetVersion()

@@ -138,7 +138,7 @@ OvlMemPgPtr OvlAllocMemPg(uint32_t size, uint32_t YUV_offset);
 int OvlFreeMemPg(OvlMemPgPtr PMemPg);
 int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg);
 
-int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size, uint32_t *yuv_offs, Bool force);
+int OvlCacheAllocBlock(OvlLayPg layout, int min_cnt, int max_cnt, uint32_t size, uint32_t *yuv_offs, Bool force_init);
 int OvlCacheFreeBlock(OvlLayPg layout);
 int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **PutFbMapAddr);
 int OvlCacheStart(OvlLayPg layout, unsigned int delay_us);

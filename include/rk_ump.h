@@ -1,1 +1,1 @@
-/usr/src/my/video/LIBS/rk_ump.h
+../../LIBS/rk_ump.h

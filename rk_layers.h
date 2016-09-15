@@ -51,9 +51,17 @@ typedef enum {
     RKL_FORMAT_RGB_565 = 21,
     RKL_FORMAT_RGBA_5551 = 25,
     RKL_FORMAT_RGBA_4444 = 27,
-    RKL_FORMAT_YCbCr_422_SP = 50, // NV16	16
-    RKL_FORMAT_YCrCb_NV12_SP = 60, // YUY2	32
-    RKL_FORMAT_YCrCb_444 = 70, //yuv444 34
+	// YCbCr - UV
+	RKL_FORMAT_UV_NV12_SP = 40, // YYYY UV, i420
+    RKL_FORMAT_UV_NV16_SP = 41, // YYYY UVUV, i422, 16
+	// YCrCb - VU
+	RKL_FORMAT_VU_NV21_SP = 50, // YYYY VU
+	RKL_FORMAT_VU_NV61_SP = 51,
+
+	RKL_FORMAT_420_P  = 60,
+	RKL_FORMAT_422_P  = 61,
+	RKL_FORMAT_444_P = 42, //yuv444 34
+
 } OvlLayoutFormatType;
 
 #define EMU_L 9	//for usability
@@ -144,5 +152,10 @@ int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **P
 int OvlCacheStart(OvlLayPg layout, unsigned int delay_us);
 int OvlCacheStop(OvlLayPg layout);
 int OvlCacheGetStat(OvlLayPg layout);
+
+int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt);
+void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr);
+void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr);
+int OvlChangeFmtRun(void);
 
 #endif

@@ -98,7 +98,7 @@ enum {
     YCrCb_NV12_SP      = 0x20, // YUY2	32
     YCrCb_444          = 0x22, //yuv444 34
 //add formats NOT for display
-    YCbCr_422_P       = 0x11, // NV16	16
+    YCbCr_422_P       = 0x11, //
     YCrCb_NV12_P      = 0x21, // YUY2	32
 
 };

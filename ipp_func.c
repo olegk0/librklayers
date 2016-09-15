@@ -102,10 +102,10 @@ void ovlIPPSetFormats(OvlLayoutFormatType format)
     case RKL_FORMAT_RGB_565:
     	IPP_mode = IPP_RGB_565;
     	break;
-    case RKL_FORMAT_YCrCb_NV12_SP:
+    case RKL_FORMAT_UV_NV12_SP:
     	IPP_mode = IPP_Y_CBCR_H2V2;//nearest suitable
         break;
-    case RKL_FORMAT_YCbCr_422_SP:
+    case RKL_FORMAT_UV_NV16_SP:
     	IPP_mode = IPP_Y_CBCR_H2V1;//nearest suitable
     	break;
 /*    case RK_FORMAT_YCrCb_NV12_P:
@@ -146,7 +146,7 @@ void ovlIPPSetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y)
 	IPP_mode = IPP_Y_CBCR_H2V2;
 	IPP_mode = IPP_Y_CBCR_H2V1;*/
     }
-    OVLDBG("fmt:%d DstYAddr:0x%X  adr_offs:%d",pOvl_priv->IPP_req.src0.fmt,pOvl_priv->ipp_dst_addr,adr_offs);
+    OVLDBG("fmt:%d DstYAddr:0x%lX  adr_offs:%d",pOvl_priv->IPP_req.src0.fmt,pOvl_priv->ipp_dst_addr,adr_offs);
     pOvl_priv->IPP_req.dst0.YrgbMst = pOvl_priv->ipp_dst_addr + adr_offs;
 }
 //--------------------------------------------------------------------------------

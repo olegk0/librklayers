@@ -304,7 +304,31 @@ int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **P
 	 *PutFbMapAddr = pOvl_priv->cache_mem_maps[cache_put_prm.NBlk];
 	 return ret;
 }
+//*****************************************************************
+int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt)
+{
+	ovlRgaInitReg( 0, 0, 0,	0, Src_w, Src_h, Src_vir, Dst_vir, 0);
+	if(ovlRGASetFormats(Src_fmt, SRC_MODE) || ovlRGASetFormats(Dst_fmt, DST_MODE))
+		return -1;
+
+	return 0;
+}
 //-----------------------------------------------------------------
+void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr)
+{
+	ovlRGASetSrc( Y_RGB_Addr, U_UV_Addr, U_Addr);
+}
+//-----------------------------------------------------------------
+void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr)
+{
+	ovlRGASetDst( Y_RGB_Addr, U_UV_Addr, U_Addr, 0);
+}
+//-----------------------------------------------------------------
+int OvlChangeFmtRun(void)
+{
+	return ovlRgaBlit(RGA_BLIT_SYNC);
+}
+//*****************************************************************
 static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
 {
 	uint32_t ret;
@@ -331,13 +355,13 @@ static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
     case RKL_FORMAT_RGBA_4444:
 		ret = RGBA_4444;
 		break;
-    case RKL_FORMAT_YCbCr_422_SP:
+    case RKL_FORMAT_UV_NV16_SP:
 		ret = YCbCr_422_SP;
 		break;
-    case RKL_FORMAT_YCrCb_NV12_SP:
+    case RKL_FORMAT_UV_NV12_SP:
 		ret = YCrCb_NV12_SP;
 		break;
-    case RKL_FORMAT_YCrCb_444:
+    case RKL_FORMAT_444_P:
 		ret = YCrCb_444;
 		break;
     case RKL_FORMAT_DEFAULT:
@@ -375,13 +399,13 @@ static OvlLayoutFormatType ovlFromHWRkFormat(uint32_t format)
 		ret = RKL_FORMAT_RGBA_4444;
 		break;
     case YCbCr_422_SP:
-		ret = RKL_FORMAT_YCbCr_422_SP;
+		ret = RKL_FORMAT_UV_NV16_SP;
 		break;
     case YCrCb_NV12_SP:
-		ret = RKL_FORMAT_YCrCb_NV12_SP;
+		ret = RKL_FORMAT_UV_NV12_SP;
 		break;
     case YCrCb_444:
-		ret = RKL_FORMAT_YCrCb_444;
+		ret = RKL_FORMAT_444_P;
 		break;
 //    case RKL_FORMAT_DEFAULT:
     default:
@@ -714,7 +738,7 @@ int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg)
 
 	if(LayValid(layout)){
 		if(layout == EMU2Layer_RGA)
-			ovlRGASetDst(ToIntMemPg(DstMemPg)->phy_addr, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
+			ovlRGASetDst(ToIntMemPg(DstMemPg)->phy_addr, 0, 0, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
 		else//IPP
 			ovlIPPSetDst(ToIntMemPg(DstMemPg)->phy_addr, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
 		return 0;
@@ -742,7 +766,7 @@ int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
 #ifdef RGA_ENABLE
     	case EMU2Layer_RGA:
     		if(pOvl_priv->RGA_req.dst.yrgb_addr){
-    			ovlRGASetSrc(ToIntMemPg(MemPg)->phy_addr);
+    			ovlRGASetSrc(ToIntMemPg(MemPg)->phy_addr, 0, 0);
     			ret = ovlRgaBlit(RGA_BLIT_SYNC);
     		}
     		break;
@@ -1276,7 +1300,7 @@ int Open_RkLayers(Bool MasterMode)
     pOvl_priv->RGA_req.dst.yrgb_addr = 0;
     OVLDBG( "HW:Initialize RGA");
     pOvl_priv->OvlFb[EMU2Layer_RGA].fd = ovlInitRGAHW();
-    if(pOvl_priv->OvlFb[EMU2Layer_RGA].fd < 0){
+    if(pOvl_priv->OvlFb[EMU2Layer_RGA].fd <= 0){
 	ERRMSG( "HW:Error RGA");
     }else{
     	pOvl_priv->OvlsCnt++;

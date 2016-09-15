@@ -23,8 +23,8 @@
 #define HW_TIMEOUT 100
 
 #define VERSION_MAJOR  0
-#define VERSION_MINOR  7
-#define VERSION_BUILD  4
+#define VERSION_MINOR  8
+#define VERSION_BUILD  1
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -193,10 +193,10 @@ int ovlInitRGAHW();
 int ovlRgaBlit(int syncmode);
 void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
 		uint32_t DstYAddr, int Src_w, int Src_h, int Src_vir, int Dst_vir, Bool PhyAdr);
-void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode);
+int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode);
 void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y);
-void ovlRGASetSrc(uint32_t SrcYAddr);
-void ovlRGASetDst(uint32_t DstYAddr, int Dst_vir);
+void ovlRGASetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr);
+void ovlRGASetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr, int Dst_vir);
 #endif
 
 #endif

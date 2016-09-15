@@ -54,7 +54,11 @@ void DdgPrintRGA( struct rga_req *RGA_req)
 //++++++++++++++++++++++++++++++++++++RGA++++++++++++++++++++++++++++++++++++++++++
 int ovlInitRGAHW()
 {
-    return open(FB_DEV_RGA, O_RDWR);
+	int fd;
+	fd = open(FB_DEV_RGA, O_RDWR);
+	if(fd < 0)
+		fd = 0;
+    return fd;
 }
 //-------------------------------------------------------------
 int ovlRgaBlit(int syncmode)
@@ -64,17 +68,20 @@ int ovlRgaBlit(int syncmode)
 #ifdef DEBUGRGA
     DdgPrintRGA(&pOvl_priv->RGA_req);
 #endif
-
-    while(pthread_mutex_trylock(&pOvl_priv->rgamutex) ==  EBUSY){
-    	timeout++;
-    	if(timeout > HW_TIMEOUT){
-    		OVLDBG("Timeout rga");
-    		return -EBUSY;
+    if(pOvl_priv->OvlFb[EMU2Layer_RGA].fd){
+    	while(pthread_mutex_trylock(&pOvl_priv->rgamutex) ==  EBUSY){
+    		timeout++;
+    		if(timeout > HW_TIMEOUT){
+    			OVLDBG("Timeout rga");
+    			return -EBUSY;
+    		}
+    		usleep(1);
     	}
-    	usleep(1);
-    }
-    ret = ioctl(pOvl_priv->OvlFb[EMU2Layer_RGA].fd, syncmode, &pOvl_priv->RGA_req);
-    pthread_mutex_unlock(&pOvl_priv->rgamutex);
+    	ret = ioctl(pOvl_priv->OvlFb[EMU2Layer_RGA].fd, syncmode, &pOvl_priv->RGA_req);
+    	pthread_mutex_unlock(&pOvl_priv->rgamutex);
+    }else
+    	ret = -ENODEV;
+
 #ifdef DEBUG
     if(ret)
     	OVLDBG("ret:%d",ret);
@@ -124,9 +131,10 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
     }
 }
 //---------------------------------------------------------------
-void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
+int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
 {
     uint8_t		RGA_mode = RK_FORMAT_RGBX_8888;
+    int ret = 0;
 
     switch(format) {
     case RKL_FORMAT_RGB_888:
@@ -135,26 +143,32 @@ void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
     case RKL_FORMAT_RGB_565:
     	RGA_mode = RK_FORMAT_RGB_565;
     	break;
-    case RKL_FORMAT_YCrCb_NV12_SP:
+    case RKL_FORMAT_UV_NV12_SP:
     	RGA_mode = RK_FORMAT_YCbCr_420_SP;
         break;
-    case RKL_FORMAT_YCbCr_422_SP:
+    case RKL_FORMAT_UV_NV16_SP:
+    	RGA_mode = RK_FORMAT_YCbCr_422_SP;
+    	break;
+    case RKL_FORMAT_VU_NV21_SP:
+    	RGA_mode = RK_FORMAT_YCrCb_420_SP;
+        break;
+    case RKL_FORMAT_VU_NV61_SP:
     	RGA_mode = RK_FORMAT_YCrCb_422_SP;
     	break;
-/*
-    case RKL_FORMAT_YCrCb_NV12_P:
+    case RKL_FORMAT_420_P:
     	RGA_mode = RK_FORMAT_YCbCr_420_P;
         break;
-    case RKL_FORMAT_YCbCr_422_P:
-    	RGA_mode = RK_FORMAT_YCrCb_422_P;
+    case RKL_FORMAT_422_P:
+    	RGA_mode = RK_FORMAT_YCbCr_422_P;
     	break;
-    	*/
+
 /*    case RK_FORMAT_YCrCb_444:
     	break;*/
 //    case RKL_FORMAT_RGBX_8888:
 //    case RKL_FORMAT_RGBA_8888:
     default:
     	RGA_mode = RK_FORMAT_RGBX_8888;
+    	ret = -1;
     }
 
     if(UpMode == SRC_MODE || UpMode == BOTH_MODE){
@@ -163,6 +177,7 @@ void ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
     if(UpMode == DST_MODE || UpMode == BOTH_MODE){
 		pOvl_priv->RGA_req.dst.format = RGA_mode;
 	}
+    return ret;
 }
 //--------------------------------------------------------------------------------
 void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y)
@@ -180,16 +195,18 @@ void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y)
 //    RGA_req.clip.ymax = overlay.cur_var.yres-1;
 }
 //---------------------------------------------------------------
-void ovlRGASetSrc(uint32_t SrcYAddr)
+void ovlRGASetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr)
 {
-    pOvl_priv->RGA_req.src.yrgb_addr = SrcYAddr;
-//    RGA_req.src.uv_addr  = SrcUVAddr;
-//    RGA_req.src.v_addr   = SrcVAddr;
+    pOvl_priv->RGA_req.src.yrgb_addr = Y_RGB_Addr;
+    pOvl_priv->RGA_req.src.uv_addr  = U_UV_Addr;
+    pOvl_priv->RGA_req.src.v_addr   = U_Addr;
 }
 //---------------------------------------------------------------
-void ovlRGASetDst(uint32_t DstYAddr, int Dst_vir)
+void ovlRGASetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr, int Dst_vir)
 {
-	pOvl_priv->RGA_req.dst.yrgb_addr = DstYAddr;
+	pOvl_priv->RGA_req.dst.yrgb_addr = Y_RGB_Addr;
+	pOvl_priv->RGA_req.dst.uv_addr  = U_UV_Addr;
+	pOvl_priv->RGA_req.dst.v_addr   = U_Addr;
 	if(Dst_vir)
 		pOvl_priv->RGA_req.dst.vir_w = Dst_vir;
 }

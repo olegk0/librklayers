@@ -137,6 +137,8 @@ int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
     int ret = 0;
 
     switch(format) {
+    case RKL_FORMAT_RGBA_8888:
+    	break;
     case RKL_FORMAT_RGB_888:
     	RGA_mode = RK_FORMAT_RGB_888;
     	break;
@@ -167,6 +169,7 @@ int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
 //    case RKL_FORMAT_RGBX_8888:
 //    case RKL_FORMAT_RGBA_8888:
     default:
+    	ERRMSG( "HW:Error RGA format:%d",format);
     	RGA_mode = RK_FORMAT_RGBX_8888;
     	ret = -1;
     }

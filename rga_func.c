@@ -198,18 +198,18 @@ void ovlRGASetDrw( int Drw_w, int Drw_h, int Drw_x, int Drw_y)
 //    RGA_req.clip.ymax = overlay.cur_var.yres-1;
 }
 //---------------------------------------------------------------
-void ovlRGASetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr)
+void ovlRGASetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
     pOvl_priv->RGA_req.src.yrgb_addr = Y_RGB_Addr;
     pOvl_priv->RGA_req.src.uv_addr  = U_UV_Addr;
-    pOvl_priv->RGA_req.src.v_addr   = U_Addr;
+    pOvl_priv->RGA_req.src.v_addr   = V_Addr;
 }
 //---------------------------------------------------------------
-void ovlRGASetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr, int Dst_vir)
+void ovlRGASetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr, int Dst_vir)
 {
 	pOvl_priv->RGA_req.dst.yrgb_addr = Y_RGB_Addr;
 	pOvl_priv->RGA_req.dst.uv_addr  = U_UV_Addr;
-	pOvl_priv->RGA_req.dst.v_addr   = U_Addr;
+	pOvl_priv->RGA_req.dst.v_addr   = V_Addr;
 	if(Dst_vir)
 		pOvl_priv->RGA_req.dst.vir_w = Dst_vir;
 }

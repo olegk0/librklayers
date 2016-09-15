@@ -314,12 +314,12 @@ int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFo
 	return 0;
 }
 //-----------------------------------------------------------------
-void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr)
+void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
 	ovlRGASetSrc( Y_RGB_Addr, U_UV_Addr, U_Addr);
 }
 //-----------------------------------------------------------------
-void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t U_Addr)
+void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
 	ovlRGASetDst( Y_RGB_Addr, U_UV_Addr, U_Addr, 0);
 }

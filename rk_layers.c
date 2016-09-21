@@ -28,6 +28,9 @@
 
 OvlHWPtr pOvl_priv;
 
+static int ovlIsUsedAlloc( OvlLayPg layout);
+static int ovlFreeUse( OvlLayPg layout);
+
 //******************************************************************************
 //int xf86LoadKernelModule(const char *modName)
 static int LoadKernelModule(const char *modName)
@@ -307,26 +310,44 @@ int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **P
 //*****************************************************************
 int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt)
 {
-	ovlRgaInitReg( 0, 0, 0,	0, Src_w, Src_h, Src_vir, Dst_vir, 0);
-	if(ovlRGASetFormats(Src_fmt, SRC_MODE) || ovlRGASetFormats(Dst_fmt, DST_MODE))
-		return -1;
+	int ret=0;
+	if(pOvl_priv->OvlLay[EMU2Layer_RGA].InUse || ovlIsUsedAlloc(EMU2Layer_RGA))
+		return -ENODEV;
 
-	return 0;
+	ovlRgaInitReg( 0, 0, 0,	0, Src_w, Src_h, Src_vir, Dst_vir, 0);
+	if(ovlRGASetFormats(Src_fmt, SRC_MODE) || ovlRGASetFormats(Dst_fmt, DST_MODE)){
+		ovlFreeUse(EMU2Layer_RGA);
+		ret = -EINVAL;
+	}else{
+		pOvl_priv->OvlLay[EMU2Layer_RGA].InUse = TRUE;
+	}
+
+	return ret;
+}
+//-----------------------------------------------------------------
+int OvlChangeFmtFree(void)
+{
+	int ret = ovlFreeUse(EMU2Layer_RGA);
+	pOvl_priv->OvlLay[EMU2Layer_RGA].InUse = FALSE;
+	return ret;
 }
 //-----------------------------------------------------------------
 void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
-	ovlRGASetSrc( Y_RGB_Addr, U_UV_Addr, U_Addr);
+	ovlRGASetSrc( Y_RGB_Addr, U_UV_Addr, V_Addr);
 }
 //-----------------------------------------------------------------
 void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
-	ovlRGASetDst( Y_RGB_Addr, U_UV_Addr, U_Addr, 0);
+	ovlRGASetDst( Y_RGB_Addr, U_UV_Addr, V_Addr, 0);
 }
 //-----------------------------------------------------------------
-int OvlChangeFmtRun(void)
+int OvlChangeFmtRun(Bool sync)
 {
-	return ovlRgaBlit(RGA_BLIT_SYNC);
+	if(sync)
+		return ovlRgaBlit(RGA_BLIT_SYNC);
+	else
+		return ovlRgaBlit(RGA_BLIT_ASYNC);
 }
 //*****************************************************************
 static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)

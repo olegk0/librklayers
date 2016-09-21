@@ -110,6 +110,7 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
 //Dst
     pOvl_priv->RGA_req.dst.vir_w = Dst_vir;
     pOvl_priv->RGA_req.dst.vir_h = pOvl_priv->OvlLay[UILayer].var.yres_virtual;
+//    pOvl_priv->RGA_req.dst.vir_h = Src_h;
 //    RGA_req.dst.x_offset = Drw_x;
 //    RGA_req.dst.y_offset = Drw_y;
     pOvl_priv->RGA_req.dst.act_w = pOvl_priv->RGA_req.src.act_w;

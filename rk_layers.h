@@ -156,6 +156,7 @@ int OvlCacheGetStat(OvlLayPg layout);
 int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt);
 void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr);
 void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr);
-int OvlChangeFmtRun(void);
+int OvlChangeFmtRun(Bool sync);
+int OvlChangeFmtFree(void);
 
 #endif

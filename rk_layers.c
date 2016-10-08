@@ -308,13 +308,13 @@ int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **P
 	 return ret;
 }
 //*****************************************************************
-int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt)
+int ovlChFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt, Bool PhyAdr)
 {
 	int ret=0;
 	if(pOvl_priv->OvlLay[EMU2Layer_RGA].InUse || ovlIsUsedAlloc(EMU2Layer_RGA))
 		return -ENODEV;
 
-	ovlRgaInitReg( 0, 0, 0,	0, Src_w, Src_h, Src_vir, Dst_vir, 0);
+	ovlRgaInitReg( 0, 0, 0,	0, Src_w, Src_h, Src_vir, Dst_vir, PhyAdr);
 	if(ovlRGASetFormats(Src_fmt, SRC_MODE) || ovlRGASetFormats(Dst_fmt, DST_MODE)){
 		ovlFreeUse(EMU2Layer_RGA);
 		ret = -EINVAL;
@@ -323,6 +323,16 @@ int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFo
 	}
 
 	return ret;
+}
+//---
+int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt)
+{
+	return ovlChFmtInit(Src_w, Src_h, Src_vir, Dst_vir, Src_fmt, Dst_fmt, 0);
+}
+//---
+int OvlChangeFmtInitPhy(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt)
+{
+	return ovlChFmtInit(Src_w, Src_h, Src_vir, Dst_vir, Src_fmt, Dst_fmt, 1);
 }
 //-----------------------------------------------------------------
 int OvlChangeFmtFree(void)

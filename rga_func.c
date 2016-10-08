@@ -134,17 +134,29 @@ void ovlRgaInitReg(uint32_t SrcYAddr, int SrcFrmt, int DstFrmt,
 //---------------------------------------------------------------
 int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
 {
-    uint8_t		RGA_mode = RK_FORMAT_RGBX_8888;
-    int ret = 0;
+    uint8_t		RGA_mode;
+    int ret = 0, rgb_mode=0;
 
     switch(format) {
     case RKL_FORMAT_RGBA_8888:
+    	RGA_mode = RK_FORMAT_RGBA_8888;
+    	rgb_mode = 1;
+    	break;
+    case RKL_FORMAT_RGBX_8888:
+    	RGA_mode = RK_FORMAT_RGBX_8888;
+    	rgb_mode = 1;
+    	break;
+    case RKL_FORMAT_BGRA_8888:
+    	RGA_mode = RK_FORMAT_BGRA_8888;
+    	rgb_mode = 1;
     	break;
     case RKL_FORMAT_RGB_888:
     	RGA_mode = RK_FORMAT_RGB_888;
+    	rgb_mode = 1;
     	break;
     case RKL_FORMAT_RGB_565:
     	RGA_mode = RK_FORMAT_RGB_565;
+    	rgb_mode = 1;
     	break;
     case RKL_FORMAT_UV_NV12_SP:
     	RGA_mode = RK_FORMAT_YCbCr_420_SP;
@@ -167,11 +179,10 @@ int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
 
 /*    case RK_FORMAT_YCrCb_444:
     	break;*/
-//    case RKL_FORMAT_RGBX_8888:
-//    case RKL_FORMAT_RGBA_8888:
     default:
     	ERRMSG( "HW:Error RGA format:%d",format);
     	RGA_mode = RK_FORMAT_RGBX_8888;
+    	rgb_mode = 1;
     	ret = -1;
     }
 
@@ -179,7 +190,12 @@ int ovlRGASetFormats(OvlLayoutFormatType format, RGAUpdModeType UpMode)
     	pOvl_priv->RGA_req.src.format = RGA_mode;
 	}
     if(UpMode == DST_MODE || UpMode == BOTH_MODE){
-		pOvl_priv->RGA_req.dst.format = RGA_mode;
+    	if(rgb_mode)
+    		pOvl_priv->RGA_req.dst.format = RGA_mode;
+    	else{
+        	ERRMSG( "HW:Error, only RGB mode for destination");
+        	ret = -1;
+    	}
 	}
     return ret;
 }

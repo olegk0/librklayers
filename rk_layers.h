@@ -44,9 +44,9 @@ typedef enum {
 
 typedef enum {
     RKL_FORMAT_DEFAULT = 0,
-    RKL_FORMAT_RGBA_8888 = 1,
-    RKL_FORMAT_RGBX_8888 = 2,
-	RKL_FORMAT_BGRA_8888 = 3,
+    RKL_FORMAT_RGBA_8888 = 1, // = Hi_AARRGGBB_Low TODO rk3188 kernel BUG
+    RKL_FORMAT_RGBX_8888 = 2, // = Hi_AARRGGBB_Low TODO rk3188 kernel BUG
+	RKL_FORMAT_BGRA_8888 = 3, // = Hi_AARRGGBB_Low TODO rk3188 kernel BUG
     RKL_FORMAT_RGB_888 = 10,
     RKL_FORMAT_RGB_565 = 21,
     RKL_FORMAT_RGBA_5551 = 25,
@@ -154,6 +154,7 @@ int OvlCacheStop(OvlLayPg layout);
 int OvlCacheGetStat(OvlLayPg layout);
 
 int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt);
+int OvlChangeFmtInitPhy(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt);
 void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr);
 void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr);
 int OvlChangeFmtRun(Bool sync);

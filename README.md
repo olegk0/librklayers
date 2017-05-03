@@ -1,5 +1,3 @@
-# rk layers library v0.8.x
+# rk layers library v0.20.x
 
-For xf86-video-rkfb (last version)
-
-Added two pseudo video layer based on IPP and RGA
+For xf86-video-rkfb (rk3288 version)

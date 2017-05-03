@@ -17,52 +17,87 @@
  */
 
 #include "rk_layers_priv.h"
+#include <sys/mman.h>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
 
-//++++++++++++++++++++++++++++++++++++USI++++++++++++++++++++++++++++++++++++++++++++
-int ovlInitUSIHW()
+
+struct drm_rockchip_gem_create {
+    uint64_t size;
+    uint32_t flags;
+    uint32_t handle;
+};
+
+/* memory type definitions. */
+enum e_drm_rockchip_gem_mem_type {
+        /* Physically Continuous memory and used as default. */
+        ROCKCHIP_BO_CONTIG      = 0 << 0,
+        /* Physically Non-Continuous memory. */
+        ROCKCHIP_BO_NONCONTIG   = 1 << 0,
+        /* non-cachable mapping and used as default. */
+        ROCKCHIP_BO_NONCACHABLE = 0 << 1,
+        /* cachable mapping. */
+        ROCKCHIP_BO_CACHABLE    = 1 << 1,
+        /* write-combine mapping. */
+        ROCKCHIP_BO_WC          = 1 << 2,
+        ROCKCHIP_BO_MASK                = ROCKCHIP_BO_NONCONTIG | ROCKCHIP_BO_CACHABLE |
+                                        ROCKCHIP_BO_WC
+};
+
+#define DRM_ROCKCHIP_GEM_CREATE 0x00
+#define DRM_IOCTL_ROCKCHIP_GEM_CREATE DRM_IOWR(DRM_COMMAND_BASE + \
+	DRM_ROCKCHIP_GEM_CREATE, struct drm_rockchip_gem_create)
+
+//++++++++++++++++++++++++++++++++++++DRM++++++++++++++++++++++++++++++++++++++++++++
+int ovlInitDRMHW()
 {
-    return open(FB_DEV_USI, O_RDONLY);
+    return open(FB_DEV_DRM, O_RDWR | O_CLOEXEC);
 }
 //-------------------------------------------------------------
-int ovlUSIAllocMem( struct usi_ump_mbs *uum)
+int ovlDRMAllocMem( struct drm_rockchip_gem_create *cr)
 {
+    if(cr->size < DRM_MIN_ALLOC_SIZE)
+    	cr->size = DRM_MIN_ALLOC_SIZE;
+
+    cr->flags = ROCKCHIP_BO_CONTIG | ROCKCHIP_BO_WC;
+
+    OVLDBG( "fd_DRM:%d size:%llu", pOvl_priv->fd_DRM, cr->size);
+    return drmIoctl(pOvl_priv->fd_DRM, DRM_IOCTL_ROCKCHIP_GEM_CREATE, cr);
+}
+//-------------------------------------------------------------
+int ovlDRMFreeMem( uint32_t handle)
+{
+    struct drm_mode_destroy_dumb arg;
 //    int ret;
+    memset(&arg, 0, sizeof(arg));
+    arg.handle = handle;
 
-    if(uum->size < USI_MIN_ALLOC_SIZE)
-    	uum->size = USI_MIN_ALLOC_SIZE;
-//    	return -EINVAL;
-    OVLDBG( "fd_USI:%d size:%d", pOvl_priv->fd_USI, uum->size);
-    return ioctl(pOvl_priv->fd_USI, USI_ALLOC_MEM_BLK, uum);
+    return drmIoctl(pOvl_priv->fd_DRM, DRM_IOCTL_MODE_DESTROY_DUMB, &arg);
 }
 //-------------------------------------------------------------
-int ovlUSIFreeMem( ump_secure_id	secure_id)
-{
-//    int ret;
-
-    return ioctl(pOvl_priv->fd_USI, USI_FREE_MEM_BLK, &secure_id);
-}
-//-------------------------------------------------------------
-int ovlUSIGetStat( struct usi_ump_mbs_info *uumi)
+/*int ovlDRMGetStat( struct usi_ump_mbs_info *uumi)
 {
 //    int ret;
 //    struct usi_ump_mbs uum;
 
-    return ioctl(pOvl_priv->fd_USI, USI_GET_INFO, uumi);
+    return ioctl(pOvl_priv->fd_DRM, DRM_GET_INFO, uumi);
 }
+*/
 //-------------------------------------------------------------
-int ovlUSIAllocRes(int res)
+/*int ovlDRMAllocRes(int res)
 {
 //    int ret;
 
-    return ioctl(pOvl_priv->fd_USI, USI_ALLOC_RES, &res);
+    return ioctl(pOvl_priv->fd_DRM, DRM_ALLOC_RES, &res);
 }
 //-------------------------------------------------------------
-int ovlUSIFreeRes(int res)
+int ovlDRMFreeRes(int res)
 {
 //    int ret;
 
-    return ioctl(pOvl_priv->fd_USI, USI_FREE_RES, &res);
+    return ioctl(pOvl_priv->fd_DRM, DRM_FREE_RES, &res);
 }
+*/
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ovlMemPgPtr ovlInitMemPgDef()
 {
@@ -72,8 +107,8 @@ ovlMemPgPtr ovlInitMemPgDef()
 		return NULL;
 
 	//calloc =( malloc + zero) - there is no need set pointers to null
-	FbMemPg->ump_fb_secure_id = UMP_INVALID_SECURE_ID;
-	FbMemPg->ump_handle = UMP_INVALID_MEMORY_HANDLE;
+	FbMemPg->mem_id = 0;
+	FbMemPg->mem_handle = 0;
 	FbMemPg->MemPgType = BUF_MEM;//by def
 
 	return FbMemPg;
@@ -85,15 +120,10 @@ int OvlUnMapBufMem( OvlMemPgPtr PMemPg)
 
     if(PMemPg != NULL && ToIntMemPg(PMemPg)->fb_mmap != NULL){
     	ovlclearbuf( PMemPg);
-    	if(ToIntMemPg(PMemPg)->MemPgType == UIFB_MEM){
+//    	if(ToIntMemPg(PMemPg)->MemPgType == UIFB_MEM)
+	{
     		ret = munmap(ToIntMemPg(PMemPg)->fb_mmap, ToIntMemPg(PMemPg)->buf_size);
     		//fbdevHWUnmapVidmem();
-    	}
-    	else{
-    		if( ToIntMemPg(PMemPg)->ump_handle != UMP_INVALID_MEMORY_HANDLE){
-    			ump_mapped_pointer_release(ToIntMemPg(PMemPg)->ump_handle);
-    			ret = 0;
-    		}
     	}
     	ToIntMemPg(PMemPg)->fb_mmap = NULL;
     }
@@ -102,28 +132,34 @@ int OvlUnMapBufMem( OvlMemPgPtr PMemPg)
 //----------------------------------------------------------------------
 void *OvlMapBufMem( OvlMemPgPtr PMemPg)
 {
+    struct drm_mode_map_dumb mreq;
 
     if(PMemPg != NULL){
     	if(ToIntMemPg(PMemPg)->fb_mmap == NULL){
     		if(ToIntMemPg(PMemPg)->MemPgType == UIFB_MEM){
-    			ToIntMemPg(PMemPg)->fb_mmap = mmap( NULL, ToIntMemPg(PMemPg)->buf_size, PROT_READ | PROT_WRITE, MAP_SHARED, pOvl_priv->OvlFb[UILayer].fd, 0);
+    			ToIntMemPg(PMemPg)->fb_mmap = mmap( NULL, ToIntMemPg(PMemPg)->buf_size,
+				 PROT_READ | PROT_WRITE, MAP_SHARED, pOvl_priv->OvlFb[UILayer].fd, 0);
     			//fbdevHWMapVidmem();
-        		if(ToIntMemPg(PMemPg)->fb_mmap == MAP_FAILED){
-        			ERRMSG("Map failed:%d",errno);
-        			ToIntMemPg(PMemPg)->fb_mmap = NULL;
-        		}
         	}else{
-        		if( ToIntMemPg(PMemPg)->ump_fb_secure_id == UMP_INVALID_SECURE_ID)
+        		if( ToIntMemPg(PMemPg)->mem_id == 0)
         			return NULL;
-        		ToIntMemPg(PMemPg)->ump_handle = ump_handle_create_from_secure_id(ToIntMemPg(PMemPg)->ump_fb_secure_id);
-        		if(ToIntMemPg(PMemPg)->ump_handle == UMP_INVALID_MEMORY_HANDLE)
-        			return NULL;
-        		ToIntMemPg(PMemPg)->fb_mmap = ump_mapped_pointer_get(ToIntMemPg(PMemPg)->ump_handle);
+			// prepare buffer for memory mapping 
+			memset(&mreq, 0, sizeof(mreq));
+			mreq.handle = ToIntMemPg(PMemPg)->mem_handle;
+			if(drmIoctl(pOvl_priv->fd_DRM, DRM_IOCTL_MODE_MAP_DUMB, &mreq))
+			    return NULL;
+        		ToIntMemPg(PMemPg)->fb_mmap = mmap(0, ToIntMemPg(PMemPg)->buf_size,
+				PROT_READ | PROT_WRITE, MAP_SHARED, pOvl_priv->fd_DRM, mreq.offset);
+//ERRMSG("buf_size:%lu offset:%lld handle:%u phy:%lX",ToIntMemPg(PMemPg)->buf_size,mreq.offset,mreq.handle,ToIntMemPg(PMemPg)->phy_addr);
         	}
-    		ovlclearbuf( ToIntMemPg(PMemPg));
-//    		return PMemPg->fb_mmap;
-    	}
+
+    		if(ToIntMemPg(PMemPg)->fb_mmap == MAP_FAILED){
+    		    ERRMSG("Map failed:%d %m",errno);
+    		    ToIntMemPg(PMemPg)->fb_mmap = NULL;
+    		}else
+		    ovlclearbuf( ToIntMemPg(PMemPg));
    		return ToIntMemPg(PMemPg)->fb_mmap;
+    	}
     }
     return NULL;
 }
@@ -146,27 +182,49 @@ uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg)
     	return 0;
 }
 //------------------------------------------------------------------
+uint32_t OvlGetName(uint32_t handle)
+{
+    int ret;
+    struct drm_gem_flink flink;
+
+    flink.handle = handle;
+    ret = drmIoctl(pOvl_priv->fd_DRM, DRM_IOCTL_GEM_FLINK, &flink);
+    if (ret) {
+        return 0;
+    }
+
+    return flink.name;
+}
+//------------------------------------------------------------------
 OvlMemPgPtr OvlAllocMemPg( uint32_t size, uint32_t UV_offset)//except UI
 {
     OvlMemPgPtr MemPg;
-    struct usi_ump_mbs uum;
+    struct drm_rockchip_gem_create cr;
     int ret;
 
     MemPg = ovlInitMemPgDef();
     if(MemPg){
-    	uum.size = size + UMP_MINIMUM_SIZE * 10; //~40kb save buf
-    	ret = ovlUSIAllocMem( &uum);
+    	cr.size = size + 4096 * 10; //~40kb save buf
+    	ret = ovlDRMAllocMem( &cr );
     	if(!ret){
-    		ToIntMemPg(MemPg)->buf_size = uum.size;
-    		ToIntMemPg(MemPg)->phy_addr = uum.addr;
-    		ToIntMemPg(MemPg)->ump_fb_secure_id = uum.secure_id;
-    		if(UV_offset)
-    			ToIntMemPg(MemPg)->offset_uv = ((UV_offset + PAGE_MASK) & ~PAGE_MASK);
-    		else
-    			ToIntMemPg(MemPg)->offset_uv = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
-    	}else{
-    		ERRMSG( "Error USIAllocMem, size:%d ret:%d", size, ret);
-    		MFREE(MemPg);
+		ToIntMemPg(MemPg)->mem_id = OvlGetName(cr.handle);
+		if(ToIntMemPg(MemPg)->mem_id <= 0){
+		    ERRMSG( "Error get mem id for handle:%d, ret:%d", cr.handle,ToIntMemPg(MemPg)->mem_id);
+		    ovlDRMFreeMem(cr.handle);
+		    MFREE(MemPg);
+		}else{
+//    OVLDBG( "get mem id:%d for handle:%d, phy:%X",ToIntMemPg(MemPg)->mem_id, cr.handle, cr.flags);
+		    ToIntMemPg(MemPg)->buf_size = cr.size;
+		    ToIntMemPg(MemPg)->phy_addr = cr.flags;
+		    ToIntMemPg(MemPg)->mem_handle = cr.handle;
+		    if(UV_offset)
+			ToIntMemPg(MemPg)->offset_uv = ((UV_offset + PAGE_MASK) & ~PAGE_MASK);
+		    else
+			ToIntMemPg(MemPg)->offset_uv = ((ToIntMemPg(MemPg)->buf_size / 2 + PAGE_MASK) & ~PAGE_MASK);
+		}
+	}else{
+		ERRMSG( "Error DRMAllocMem, size:%d ret:%d", size, ret);
+		MFREE(MemPg);
     	}
     }else{
     	ERRMSG( "Error InitMemPgDef");
@@ -181,7 +239,7 @@ int OvlFreeMemPg( OvlMemPgPtr PMemPg)
     if(PMemPg){
     	ret = OvlUnMapBufMem(  PMemPg);
     	if(ToIntMemPg(PMemPg)->MemPgType != UIFB_MEM)
-    		ret |= ovlUSIFreeMem( ToIntMemPg(PMemPg)->ump_fb_secure_id);
+    		ret |= ovlDRMFreeMem( ToIntMemPg(PMemPg)->mem_handle);
     	MFREE(PMemPg);
     }
     return ret;

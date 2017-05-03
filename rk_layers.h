@@ -22,6 +22,8 @@
 
 #include <linux/fb.h>
 
+#define DEF_COLOR_KEY 0
+
 #define MAX_PANEL_SIZE_X 1920
 //#define PANEL_SIZE_X 1280
 #define MAX_PANEL_SIZE_Y 1080
@@ -65,6 +67,8 @@ typedef enum {
 } OvlLayoutFormatType;
 
 #define EMU_L 9	//for usability
+#define BOTTOM_LAY 64
+
 typedef enum {
 	ERROR_L=-1,
 	UI_L=0,
@@ -72,6 +76,7 @@ typedef enum {
 	ANY_HW_L = ANY_L,					//preferably any hardware layer
 	SCALE_L= 3,							//scalable, preferably hardware layer
 	NOTSCALE_L= 4,						//not scalable, preferably hardware layer
+	HWC_L= 5,
 	ANY_EMU_L = ANY_HW_L + EMU_L,			//preferably any emulated layer
 	EMU_SCALE_L = SCALE_L + EMU_L,			//scalable, preferably pseudo layer (IPP based)
 	EMU_NOTSCALE_L = NOTSCALE_L + EMU_L,	//not scalable, preferably pseudo layer (RGA based)
@@ -125,10 +130,13 @@ uint32_t OvlVresByXres(uint32_t xres);
 uint32_t OvlGetFbSizeByLay( OvlLayPg layout);
 int OvlGetPanelSize(uint32_t *Panel_w, uint32_t *Panel_h);
 //-------------------------------------------------------------
-int OvlWaitVSync();
+//int OvlWaitVSync();
+int OvlWaitVSync( OvlLayPg layout);
 int OvlFlipFb(OvlLayPg layout, OvlFbBufType flip, Bool clrPrev);
 //-------------------------------------------------------------
-int OvlSetColorKey(uint32_t color);
+int OvlSetColorKey( OvlLayPg layout, unsigned int color, Bool Enable);
+unsigned int OvlGetUIColorKey(void);
+void OvlSetUIColorKey(unsigned int ColorKey);
 int OvlEnable( OvlLayPg layout, int enable, int vsync_en);
 int OvlSetupBufDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h, int SrcPitch);
 int OvlSetupDrw(OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h);
@@ -140,7 +148,7 @@ uint32_t OvlGetUVoffsetMemPg( OvlMemPgPtr PMemPg);
 uint32_t OvlGetPhyAddrMemPg( OvlMemPgPtr PMemPg);
 void * OvlMapBufMem(OvlMemPgPtr PMemPg);
 int OvlUnMapBufMem(OvlMemPgPtr PMemPg);
-OvlLayPg OvlAllocLay(OvlLayoutType type, OvlFbBufAllocType FbBufAlloc);
+OvlLayPg OvlAllocLay(int type, OvlFbBufAllocType FbBufAlloc);
 int OvlFreeLay(OvlLayPg layout);
 OvlMemPgPtr OvlAllocMemPg(uint32_t size, uint32_t YUV_offset);
 int OvlFreeMemPg(OvlMemPgPtr PMemPg);

@@ -26,20 +26,23 @@
 #define MODPROBE_PATH_FILE      "/proc/sys/kernel/modprobe"
 #define MAX_PATH                1024
 
+#define LOCK_FILE_TMP	"/tmp/rkllock_fb%d"
+
+unsigned int layers_hw_type[HW_OVERLAYs] = { LAYERS_HW_TYPE };
+
 OvlHWPtr pOvl_priv;
 
 static int ovlIsUsedAlloc( OvlLayPg layout);
 static int ovlFreeUse( OvlLayPg layout);
 
 //******************************************************************************
-//int xf86LoadKernelModule(const char *modName)
-static int LoadKernelModule(const char *modName)
+/*static int LoadKernelModule(const char *modName)
 {
     char mpPath[MAX_PATH] = "";
     int fd = -1, status, n;
     pid_t pid;
 
-    /* get the path to the modprobe program */
+    // get the path to the modprobe program 
     fd = open(MODPROBE_PATH_FILE, O_RDONLY);
     if (fd >= 0) {
         int count = read(fd, mpPath, MAX_PATH - 1);
@@ -48,28 +51,28 @@ static int LoadKernelModule(const char *modName)
             mpPath[0] = 0;
         }
         else if (mpPath[count - 1] == '\n') {
-            mpPath[count - 1] = 0;      /* replaces \n with \0 */
+            mpPath[count - 1] = 0;      // replaces \n with \0 
         }
         close(fd);
-        /* if this worked, mpPath will be "/sbin/modprobe" or similar. */
+        // if this worked, mpPath will be "/sbin/modprobe" or similar. 
     }
 
     if (mpPath[0] == 0) {
-        /* we failed to get the path from the system, use a default */
+        // we failed to get the path from the system, use a default 
         strcpy(mpPath, "/sbin/modprobe");
     }
 
-    /* now fork/exec the modprobe command */
-    /*
-     * It would be good to capture stdout/stderr so that it can be directed
-     * to the log file.  modprobe errors currently are missing from the log
-     * file.
-     */
+    // now fork/exec the modprobe command 
+
+    // * It would be good to capture stdout/stderr so that it can be directed
+    // * to the log file.  modprobe errors currently are missing from the log
+    // * file.
+
     switch (pid = fork()) {
-    case 0:                    /* child */
-        /* change real/effective user ID to 0/0 as we need to
-         * preinstall agpgart module for some DRM modules
-         */
+    case 0:                    // child 
+        // change real/effective user ID to 0/0 as we need to
+        // * preinstall agpgart module for some DRM modules
+
         if (setreuid(0, 0)) {
         	OVLDBG( "LoadKernelModule: "
                     "Setting of real/effective user Id to 0/0 failed");
@@ -77,15 +80,15 @@ static int LoadKernelModule(const char *modName)
         setenv("PATH", "/sbin", 1);
         n = execl(mpPath, "modprobe", modName, NULL);
         OVLDBG( "LoadKernelModule %s\n", strerror(errno));
-        exit(EXIT_FAILURE);     /* if we get here the child's exec failed */
+        exit(EXIT_FAILURE);     // if we get here the child's exec failed 
         break;
-    case -1:                   /* fork failed */
+    case -1:                   // fork failed 
         return 0;
-    default:                   /* fork worked */
+    default:                   // fork worked 
     {
-        /* XXX we loop over waitpid() because it sometimes fails on
-         * the first attempt.  Don't know why!
-         */
+        // XXX we loop over waitpid() because it sometimes fails on
+        // * the first attempt.  Don't know why!
+
         int count = 0, p;
 
         do {
@@ -97,7 +100,7 @@ static int LoadKernelModule(const char *modName)
         }
 
         if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            return 1;           /* success! */
+            return 1;           // success! 
         }
         else {
             return 0;
@@ -105,15 +108,16 @@ static int LoadKernelModule(const char *modName)
     }
     }
 
-    /* never get here */
+    // never get here 
     return 0;
 }
+*/
 //--------------------------------------------------------------------------------
 int OvlSetHDMI(int xres,int yres)
 {
 	int ret=0;
     FILE *fp;
-
+return 0;
 	//	tmp = resToHDMImodes(pOvl_priv->cur_var.xres,pOvl_priv->cur_var.yres);
 	//	ioctl(pOvl_priv->OvlFb[UserInterfaceFB].fd, FBIOSET_HDMI_MODE, &tmp);//use HDMI scaling
 
@@ -242,6 +246,7 @@ int OvlCacheFreeBlock(OvlLayPg layout)
 {
 	int ret;
 
+	OVLDBG("");
 	if(!LayHWValid(layout))
 		return -ENODEV;
 
@@ -260,6 +265,7 @@ int OvlCacheGetStat(OvlLayPg layout)
 {
 	int ret;
 
+	OVLDBG("");
 	if(!LayHWValid(layout) || !pOvl_priv->CacheMemPg )
 		return -ENODEV;
 
@@ -271,6 +277,7 @@ int OvlCacheGetStat(OvlLayPg layout)
 //-----------------------------------------------------------------
 int OvlCacheStart(OvlLayPg layout, unsigned int delay_us)
 {
+	OVLDBG("");
 	if(!LayHWValid(layout) || !pOvl_priv->CacheMemPg )
 		return -ENODEV;
 
@@ -284,6 +291,7 @@ int OvlCacheStop(OvlLayPg layout)
 {
 	unsigned int delay_us=0;
 
+	OVLDBG("");
 //	if(!LayHWValid(layout) || !pOvl_priv->CacheMemPg )
 	if(!LayHWValid(layout))
 		return -ENODEV;
@@ -296,6 +304,7 @@ int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **P
 	int ret;
 	cache_put_prm_t cache_put_prm;
 
+//	OVLDBG("");
 	 if(!LayHWValidAndNotUI(layout) || !pOvl_priv->CacheMemPg )
 		 return -ENODEV;
 
@@ -310,6 +319,7 @@ int OvlGetCacheBlockForPut(OvlLayPg layout, uint32_t *PutFbPhyAddr, uint32_t **P
 //*****************************************************************
 int ovlChFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt, Bool PhyAdr)
 {
+#ifdef RGA_ENABLE
 	int ret=0;
 	if(pOvl_priv->OvlLay[EMU2Layer_RGA].InUse || ovlIsUsedAlloc(EMU2Layer_RGA))
 		return -ENODEV;
@@ -323,6 +333,10 @@ int ovlChFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormat
 	}
 
 	return ret;
+#else
+    (void)Src_w;(void)Src_h;(void)Src_vir;(void)Dst_vir;(void)Src_fmt;(void)Dst_fmt;(void)PhyAdr;
+	return -ENODEV;
+#endif
 }
 //---
 int OvlChangeFmtInit(int Src_w, int Src_h, int Src_vir, int Dst_vir, OvlLayoutFormatType Src_fmt, OvlLayoutFormatType Dst_fmt)
@@ -344,20 +358,33 @@ int OvlChangeFmtFree(void)
 //-----------------------------------------------------------------
 void OvlChangeFmtSetSrc(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
+#ifdef RGA_ENABLE
 	ovlRGASetSrc( Y_RGB_Addr, U_UV_Addr, V_Addr);
+#else
+    (void)Y_RGB_Addr;(void)U_UV_Addr;(void)V_Addr;
+#endif
 }
 //-----------------------------------------------------------------
 void OvlChangeFmtSetDst(uint32_t Y_RGB_Addr, uint32_t U_UV_Addr, uint32_t V_Addr)
 {
+#ifdef RGA_ENABLE
 	ovlRGASetDst( Y_RGB_Addr, U_UV_Addr, V_Addr, 0);
+#else
+    (void)Y_RGB_Addr;(void)U_UV_Addr;(void)V_Addr;
+#endif
 }
 //-----------------------------------------------------------------
 int OvlChangeFmtRun(Bool sync)
 {
+#ifdef RGA_ENABLE
 	if(sync)
 		return ovlRgaBlit(RGA_BLIT_SYNC);
 	else
 		return ovlRgaBlit(RGA_BLIT_ASYNC);
+#else
+	(void)sync;
+	return -ENODEV;
+#endif
 }
 //*****************************************************************
 static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
@@ -402,6 +429,99 @@ static uint32_t ovlToHWRkFormat(OvlLayoutFormatType format)
 
     return ret;
 }
+//*****************************************************************
+static void ovlSetFbVarFormat(OvlLayoutFormatType format, struct fb_var_screeninfo *var)
+{
+
+    switch(format) {
+    case RKL_FORMAT_RGBA_8888:
+	var->bits_per_pixel=32;
+	var->nonstd=(var->nonstd & ~0xff) | RGBA_8888;
+	var->red.offset=0;
+	var->red.length=8;
+	var->green.offset=8;
+	var->green.length=8;
+	var->blue.offset=16;
+	var->blue.length=8;
+	var->transp.offset=24;
+	var->transp.length=8;
+	break;
+    default:
+    case RKL_FORMAT_RGBX_8888:
+	var->bits_per_pixel=32;
+	var->nonstd=(var->nonstd & ~0xff) | RGBX_8888;
+	var->red.offset=0;
+	var->red.length=8;
+	var->green.offset=8;
+	var->green.length=8;
+	var->blue.offset=16;
+	var->blue.length=8;
+	var->transp.offset=0;
+	var->transp.length=0;
+	break;
+    case RKL_FORMAT_BGRA_8888:
+	var->bits_per_pixel=32;
+	var->nonstd=(var->nonstd & ~0xff) | BGRA_8888;//5
+	var->red.offset=16;
+	var->red.length=8;
+	var->green.offset=8;
+	var->green.length=8;
+	var->blue.offset=0;
+	var->blue.length=8;
+	var->transp.offset=24;
+	var->transp.length=8;
+	break;
+    case RKL_FORMAT_RGB_888:
+	var->bits_per_pixel=24;
+	var->nonstd=(var->nonstd & ~0xff) | RGB_888;
+	var->red.offset=16;
+	var->red.length=8;
+	var->green.offset=8;
+	var->green.length=8;
+	var->blue.offset=0;
+	var->blue.length=8;
+	var->transp.offset=0;
+	var->transp.length=0;
+	break;
+    case RKL_FORMAT_RGB_565:
+	var->bits_per_pixel=16;
+	var->nonstd=(var->nonstd & ~0xff) | RGB_565;//4
+	var->red.offset=11;
+	var->red.length=5;
+	var->green.offset=5;
+	var->green.length=6;
+	var->blue.offset=0;
+	var->blue.length=5;
+	var->transp.offset=0;
+	var->transp.length=0;
+	break;
+    case RKL_FORMAT_RGBA_5551:
+	var->bits_per_pixel=16;
+	var->nonstd=(var->nonstd & ~0xff) | RGBA_5551;
+	var->red.offset=10;
+	var->red.length=5;
+	var->green.offset=5;
+	var->green.length=5;
+	var->blue.offset=0;
+	var->blue.length=5;
+	var->transp.offset=15;
+	var->transp.length=1;
+	break;
+    case RKL_FORMAT_RGBA_4444:
+	var->bits_per_pixel=16;
+	var->nonstd=(var->nonstd & ~0xff) | RGBA_4444;
+	var->red.offset=8;
+	var->red.length=4;
+	var->green.offset=4;
+	var->green.length=4;
+	var->blue.offset=0;
+	var->blue.length=4;
+	var->transp.offset=12;
+	var->transp.length=4;
+	break;
+    }
+}
+
 //-----------------------------------------------------------------
 static OvlLayoutFormatType ovlFromHWRkFormat(uint32_t format)
 {
@@ -551,8 +671,8 @@ OvlLayoutFormatType OvlGetModeByLay( OvlLayPg layout)
 uint32_t OvlGetSidByMemPg( OvlMemPgPtr PMemPg)
 {
     if(PMemPg == NULL)
-    	return UMP_INVALID_SECURE_ID;
-   	return ToIntMemPg(PMemPg)->ump_fb_secure_id;
+    	return 0;
+   	return ToIntMemPg(PMemPg)->mem_id;
 }
 
 //*******************************************************************************
@@ -586,34 +706,56 @@ int OvlGetUIBpp()
 
     return ret;
 }
-//--------------------------------------------------------------------------------
-int OvlSetColorKey( uint32_t color)
+//------------------------------------------------------------------
+void OvlSetUIColorKey(unsigned int ColorKey)
 {
-	struct color_key_cfg colorkeys;
-//    return ioctl(pOvl_priv->OvlFb[UILayer].fd, FBIOSET_COLORKEY, &color);
-	colorkeys.win0_color_key_cfg = color;
-	colorkeys.win1_color_key_cfg = color;
-	colorkeys.win2_color_key_cfg = color;
-	return ioctl(pOvl_priv->OvlFb[UILayer].fd, RK_FBIOPUT_COLOR_KEY_CFG, &colorkeys);
-
+    pOvl_priv->ColorKeyDef = ColorKey;
 }
 //------------------------------------------------------------------
-//int OvlWaitSync( OvlLayPg layout)
-int OvlWaitVSync()
+unsigned int OvlGetUIColorKey(void)
 {
-    uint32_t tmp=0;
+    return pOvl_priv->ColorKeyDef;
+}
+//--------------------------------------------------------------------------------
+int OvlSetColorKey( OvlLayPg layout, uint32_t color, Bool Enable)
+{
+    struct color_key_cfg colorkeys;
 
-    return ioctl(pOvl_priv->OvlFb[UILayer].fd, FBIO_WAITFORVSYNC, &tmp);
-/*    if(LayValid(layout))
-    	return ioctl(FbByLay(layout)->fd, FBIO_WAITFORVSYNC, &tmp);
-    else
+    if(LayValid(layout) && pOvl_priv->OvlLay[layout].InUse){
+	if(layout != UILayer){
+	    colorkeys.win0_color_key_cfg = OvlGetUIColorKey() | 0x80000000;
+	    ioctl(FbByLay(UILayer)->fd, RK_FBIOPUT_COLOR_KEY_CFG, &colorkeys);
+	}
+
+	if(Enable){
+	    color |= 0x80000000;
+	}
+	colorkeys.win0_color_key_cfg = color;
+/*	colorkeys.win1_color_key_cfg = color;
+	colorkeys.win2_color_key_cfg = color;
+*/
+	return ioctl(FbByLay(layout)->fd, RK_FBIOPUT_COLOR_KEY_CFG, &colorkeys);
+    }else
+	return -1;
+}
+//------------------------------------------------------------------
+int OvlWaitVSync( OvlLayPg layout)
+//int OvlWaitVSync()
+{
+//    uint32_t tmp=0;
+
+//    return ioctl(pOvl_priv->OvlFb[UILayer].fd, FBIO_WAITFORVSYNC, &tmp);
+    if(LayValid(layout)){
+	ioctl(FbByLay(layout)->fd, FBIO_WAITFORVSYNC);
+    	return ioctl(FbByLay(layout)->fd, FBIO_WAITFORVSYNC);
+    }else
     	return -1;
-    	*/
+    	
 }
 //--------------------------------------------------------------------------------
 int ovlclearbuf( ovlMemPgPtr PMemPg)
 {
-    if(PMemPg == NULL || PMemPg->fb_mmap == NULL || MemPgIsUI(PMemPg))
+    if(PMemPg == NULL || PMemPg->fb_mmap == NULL/* || MemPgIsUI(PMemPg)*/)
     	return -ENODEV;
 	memset(PMemPg->fb_mmap,0,PMemPg->buf_size);
 //	memset_neon (PMemPg->fb_mmap,0,PMemPg->buf_size);
@@ -656,7 +798,9 @@ static int ovlSetModeFb( OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayou
 //    if(LayValidAndNotUI(layout)){
 //    if((xres > pOvl_priv->cur_var.xres)||(yres > pOvl_priv->cur_var.yres)) return -1;
     	if(format != RKL_FORMAT_DEFAULT)
-    		pOvl_priv->OvlLay[layout].var.nonstd = (pOvl_priv->OvlLay[layout].var.nonstd & ~0xff) | ovlToHWRkFormat(format);
+	    ovlSetFbVarFormat(format, &pOvl_priv->OvlLay[layout].var);
+//    		pOvl_priv->OvlLay[layout].var.nonstd = (pOvl_priv->OvlLay[layout].var.nonstd & ~0xff) | ovlToHWRkFormat(format);
+
     	if(xres>0){
     		pOvl_priv->OvlLay[layout].var.xres = xres;
     	}
@@ -665,6 +809,10 @@ static int ovlSetModeFb( OvlLayPg layout, uint32_t xres, uint32_t yres, OvlLayou
     		pOvl_priv->OvlLay[layout].var.yres = yres;
     	}
     	pOvl_priv->OvlLay[layout].var.yres_virtual = pOvl_priv->OvlLay[layout].var.yres;
+//    	pOvl_priv->OvlLay[layout].var.activate |= FB_ACTIVATE_FORCE | FB_ACTIVATE_NXTOPEN;
+//	pOvl_priv->OvlLay[layout].var.vmode |= FB_VMODE_CONUPDATE;
+//	pOvl_priv->OvlLay[layout].var.activate = FB_ACTIVATE_NOW;
+//	pOvl_priv->OvlLay[layout].var.grayscale = 0;
 
     	if(LayHWValid(layout))
     		ret = ioctl(FbByLay(layout)->fd, FBIOPUT_VSCREENINFO, &pOvl_priv->OvlLay[layout].var);
@@ -695,7 +843,8 @@ int OvlSetupFb( OvlLayPg layout, OvlLayoutFormatType format, uint32_t xres, uint
 {
     int ret;
 
-    if(LayValidAndNotUI(layout)){
+//    if(LayValidAndNotUI(layout)){
+    if(LayValid(layout)){
 
     	ret = ovlUpdVarOnChangeRes( layout);
     	ret |= ovlSetModeFb( layout, xres , yres, format);
@@ -735,7 +884,8 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h)
 {
     int ret=0;
 
-    if(LayValidAndNotUI(layout)){
+//    if(LayValidAndNotUI(layout)){
+    if(LayValid(layout)){
     	if(layout >= EMU1Layer_IPP){
     		switch(layout){
 #ifdef RGA_ENABLE
@@ -763,10 +913,10 @@ int OvlSetupDrw( OvlLayPg layout, int Drw_x, int Drw_y, int Drw_w, int Drw_h)
     return ret;
 }
 //----------------------------------------------------------------------------------
-#if defined(RGA_ENABLE) || defined(IPP_ENABLE)
+
 int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg)
 {
-
+#if defined(RGA_ENABLE) || defined(IPP_ENABLE)
 	if(LayValid(layout)){
 		if(layout == EMU2Layer_RGA)
 			ovlRGASetDst(ToIntMemPg(DstMemPg)->phy_addr, 0, 0, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
@@ -774,15 +924,11 @@ int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg)
 			ovlIPPSetDst(ToIntMemPg(DstMemPg)->phy_addr, pOvl_priv->OvlLay[UILayer].var.xres_virtual);
 		return 0;
     }
-
+#else
+    (void)layout;(void)DstMemPg;
+#endif
     return -EINVAL;
 }
-#else
-int OvlSetIPP_RGADst( OvlLayPg layout, OvlMemPgPtr DstMemPg)
-{
-	return -EINVAL;
-}
-#endif
 //----------------------------------------------------------------------------------
 int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
 {
@@ -790,7 +936,7 @@ int OvlLayerLinkMemPg( OvlLayPg layout, OvlMemPgPtr MemPg)
     uint32_t tmp[2];
     ovlFbPtr PFb;
 
-    if(LayValid(layout)){
+    if(LayValid(layout) && MemPg){
     	PFb = FbByLay(layout);
 
     	switch(layout){
@@ -860,52 +1006,80 @@ int OvlEnable( OvlLayPg layout, int enable, int vsync_en)
 {
 	int ret;
     if(LayValidAndNotUI(layout)){
-    	if(layout >= EMU1Layer_IPP)
-    		ioctl(FbByLay(UILayer)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
-    	else{
-    		ioctl(FbByLay(layout)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
+    	if(layout >= EMU1Layer_IPP){
+//    		ioctl(FbByLay(UILayer)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
+    	}else{
+//    		ioctl(FbByLay(layout)->fd, RK_FBIOSET_VSYNC_ENABLE, &vsync_en);
     		ret = ioctl(FbByLay(layout)->fd, RK_FBIOSET_ENABLE, &enable);
     	}
     	ret = 0;
+    OVLDBG("layout:%d en:%d vsync:%d ret:%d", layout, enable, vsync_en, ret);
     }
     else
     	ret = -ENODEV;
-    OVLDBG("layout:%d en:%d vsync:%d ret:%d", layout, enable, vsync_en, ret);
 
     return ret;
 }
 //---------------------------------------------------------------------
 static int ovlIsUsedAlloc( OvlLayPg layout)
 {
-    int ret, used=0;
+    int ret =0;
+    char nm[20];
 
-    ret = ovlUSIAllocRes(layout);
-    if(ret < 0)//if already in use
-	used = 1;
-
-    OVLDBG("layout:%d used:%d ret:%d", layout, used, ret);
-
-    return used;
-}
-//---------------------------------------------------------------------
-int ovlIsUsedCheck( OvlLayPg layout)
-{
-	int used;
-
-	used = ovlIsUsedAlloc(layout);
-
-    if(!used){
-    	OvlEnable(layout, 0, 1); // workaround layer activation when opening
-    	ovlUSIFreeRes(layout);
+//    if(!LayHWValidAndNotUI(layout)) //TODO for RGA IPP
+    if(!LayHWValid(layout)) //TODO for RGA IPP
+	ret = -EINVAL; 
+    else{
+/*	if(LayIsUIfb(layout))
+	    return 0;
+*/
+	if(pOvl_priv->OvlLay[layout].lock_fd <= 0){
+	    mode_t sm = umask(0);
+	    sprintf (nm, LOCK_FILE_TMP, layout);
+	    pOvl_priv->OvlLay[layout].lock_fd = open(nm, O_RDWR | O_CREAT | O_CLOEXEC, 00666);
+	    umask(sm);
+	    if (pOvl_priv->OvlLay[layout].lock_fd < 0)
+		return -EBUSY;
+	}
+	if(lockf( pOvl_priv->OvlLay[layout].lock_fd, F_TLOCK, 0))
+	    ret = -EBUSY;
     }
 
-    return used;
-
+    OVLDBG("layout:%d ret:%d", layout, ret);
+    return ret;
 }
 //---------------------------------------------------------------------
 static int ovlFreeUse( OvlLayPg layout)
 {
-	return ovlUSIFreeRes(layout);
+    int ret;
+
+    if(!LayHWValid(layout)) //TODO for RGA IPP
+	ret = -EINVAL; 
+/*
+    if(LayIsUIfb(layout))
+	return 0;
+*/
+    if(pOvl_priv->OvlLay[layout].lock_fd <= 0)
+	ret = -EBUSY;
+
+    ret = close(pOvl_priv->OvlLay[layout].lock_fd);
+    pOvl_priv->OvlLay[layout].lock_fd = 0;
+
+    return ret;
+}
+//---------------------------------------------------------------------
+int ovlDisableUnused( OvlLayPg layout)
+{
+    int used;
+
+    used = ovlIsUsedAlloc(layout);
+    if(!used){
+	if(!LayIsUIfb(layout))
+    	    OvlEnable(layout, 0, 0); // workaround layer activation when opening
+    	ovlFreeUse(layout);
+    }
+
+    return used;
 }
 //---------------------------------------------------------------------
 int OvlResetFB( OvlLayPg layout)
@@ -944,28 +1118,42 @@ int OvlResetFB( OvlLayPg layout)
 }
 */
 //------------------------------------------------------------------
-OvlLayPg OvlAllocLay( OvlLayoutType type, OvlFbBufAllocType FbBufAlloc)
+OvlLayPg OvlAllocLay( int type, OvlFbBufAllocType FbBufAlloc)
 {
     OvlLayPg lay=MAX_OVERLAYs;
+    int dir = type & BOTTOM_LAY;
+
+    if(dir)
+	type &= ~BOTTOM_LAY;
 
     switch(type){
     case UI_L:
     case SCALE_L:
     case NOTSCALE_L:
-    	for(lay=0;lay < MAX_OVERLAYs;lay++){
-    		if(FbByLay(lay)->Type != type || ! pOvl_priv->OvlsAvl[lay])
-    			continue;
-    		if( lay == EMU1Layer_IPP && OvlGetUIBpp() == 24)//IPP does not support 24 bit pixel
-    			continue;
-   			if(!pOvl_priv->OvlLay[lay].InUse && !ovlIsUsedAlloc(lay))
-   				break;
-/*    			else{
+	if(dir)
+	    for(lay=0;lay < MAX_OVERLAYs;lay++){
+		if(FbByLay(lay)->Type != type || ! pOvl_priv->OvlsAvl[lay])
+			continue;
+		if( lay == EMU1Layer_IPP && OvlGetUIBpp() == 24)//IPP does not support 24 bit pixel
+			continue;
+		if(!pOvl_priv->OvlLay[lay].InUse && !ovlIsUsedAlloc(lay))
+			break;
+/* 			else{
 //		    t = ovlSwapLay( i, type);
 //		    if(t==ERRORL)
-    				lay = ERRORL;
-    			}*/
-    	}
-    	break;
+				lay = ERRORL;
+			}*/
+	    }
+	else
+	    for(lay=MAX_OVERLAYs-1;lay > 0;lay--){
+		if(FbByLay(lay)->Type != type || ! pOvl_priv->OvlsAvl[lay])
+			continue;
+		if( lay == EMU1Layer_IPP && OvlGetUIBpp() == 24)
+			continue;
+		if(!pOvl_priv->OvlLay[lay].InUse && !ovlIsUsedAlloc(lay))
+			break;
+	    }
+	break;
     case ANY_HW_L://except UIL
 //    case ANY_L:
     	for(lay=0;lay < MAX_OVERLAYs;lay++){
@@ -1193,34 +1381,54 @@ static void set_ovl_param(Bool MasterMode)
     	pOvl_priv->OvlLay[i].FbMemPgs[FRONT_FB] = NULL;
     	pOvl_priv->OvlLay[i].FbMemPgs[BACK_FB] = NULL;
 
-    	switch(i){// UI_L=0, SCALE_L=1, ANY_HW_L =3, EMU_L = 4, ANY_L =6
-    	case UILayer:
-    		pOvl_priv->OvlFb[i].Type = UI_L;
-    		break;
-    	case Ovl1Layer:
-    	case Ovl2Layer:
-    		pOvl_priv->OvlFb[i].Type = SCALE_L;
-    		break;
+	if(i < HW_OVERLAYs)
+	{
+// 	OVLDBG("layer:%d type:%d",i, layers_hw_type[i]);
+	    switch(layers_hw_type[i]){
+	    case HW_UI:
+		pOvl_priv->OvlFb[i].Type = UI_L;
+		break;
+	    case HW_NONE:
+		pOvl_priv->OvlFb[i].Type = NOTSCALE_L;
+		break;
+	    case HW_HWC:
+		pOvl_priv->OvlFb[i].Type = HWC_L;
+		break;
+	    default:
+		if(layers_hw_type[i] & HW_SCALE) //TODO HW_YUV
+		    pOvl_priv->OvlFb[i].Type = SCALE_L;
+		else
+		    ERRMSG( "HW:Error indeterminate overlay type");
+	    }
+	}else{
+/*
+#ifdef IPP_ENABLE
+TODO
     	case EMU1Layer_IPP:
     		pOvl_priv->OvlFb[i].Type = SCALE_L;
     		break;
+#endif
+#ifdef RGA_ENABLE
+TODO
     	case EMU2Layer_RGA:
     		pOvl_priv->OvlFb[i].Type = NOTSCALE_L;
     		break;
-    	default:
-    		ERRMSG( "HW:Error indeterminate overlay type");
-    	}
+#endif
+*/
+	}
 
     	if(pOvl_priv->OvlsAvl[i])
     	{
     		memcpy(&pOvl_priv->OvlLay[i].var, &pOvl_priv->cur_var, sizeof(struct fb_var_screeninfo));
-    		if(i < EMU1Layer_IPP)
-    			ioctl(pOvl_priv->OvlFb[i].fd, FBIOGET_FSCREENINFO, &pOvl_priv->OvlFb[i].fix);
-
+//    		if(i < EMU1Layer_IPP)
+	    if(layers_hw_type[i] == HW_UI)
+		ioctl(pOvl_priv->OvlFb[i].fd, FBIOGET_FSCREENINFO, &pOvl_priv->OvlFb[i].fix);
+/*
     		if(MasterMode){
     			OvlEnable( i, 0, 1);
     		}
-    		ovlIsUsedCheck(i);// deactivate nonused layers
+*/
+//    		ovlDisableUnused(i);// deactivate nonused layers
     	}
 
     }
@@ -1231,25 +1439,34 @@ static void set_ovl_param(Bool MasterMode)
 static int ovl_setup_ovl()
 {
     int i;
+    char nm[10];
 
-    pOvl_priv->OvlsCnt = 0;
+    for(i=0;i<MAX_OVERLAYs;i++){
+	if(i < HW_OVERLAYs){
+	    pOvl_priv->OvlsAvl[i]=FALSE;
+	    sprintf (nm, FB_DEV_TMP, i);
+	    pOvl_priv->OvlFb[i].fd = open(nm, O_RDWR);
+	    if (pOvl_priv->OvlFb[i].fd > 0)
+		pOvl_priv->OvlsAvl[i]=TRUE;
+	}
 
-    for(i=0;i<MAX_OVERLAYs;i++)
-    	pOvl_priv->OvlsAvl[i]=FALSE;
+	pOvl_priv->OvlLay[i].lock_fd = 0;
+    }
 
-    pOvl_priv->OvlFb[UILayer].fd = open(FB_DEV_UI, O_RDWR);
+/*    pOvl_priv->OvlFb[UILayer].fd = open(FB_DEV_UI, O_RDWR);
     if (pOvl_priv->OvlFb[UILayer].fd < 0){
     	ERRMSG( "HW:Error open FB_DEV_UI");
     	return pOvl_priv->OvlFb[UILayer].fd;
     }
-    pOvl_priv->OvlsCnt++;
+*/
+/*    pOvl_priv->OvlsCnt++;
     pOvl_priv->OvlsAvl[UILayer]=TRUE;
 
     pOvl_priv->OvlFb[Ovl1Layer].fd = open(FB_DEV_O1, O_RDONLY); //main Ovl_priv
     if (pOvl_priv->OvlFb[Ovl1Layer].fd < 0){
     	ERRMSG( "HW:Error open FB_DEV_O1");
     }else{
-    	pOvl_priv->OvlsCnt++;
+//    	pOvl_priv->OvlsCnt++;
     	pOvl_priv->OvlsAvl[Ovl1Layer]=TRUE;
     }
 
@@ -1258,13 +1475,15 @@ static int ovl_setup_ovl()
     	OVLDBG( "HW:Error open FB_DEV_O2");
     }
     else{
-    	pOvl_priv->OvlsCnt++;
+//    	pOvl_priv->OvlsCnt++;
     	pOvl_priv->OvlsAvl[Ovl2Layer]=TRUE;
     }
-
+*/
+    pOvl_priv->OvlsCnt = HW_OVERLAYs;
     OVLDBG("HWOvlsCnt:%d", pOvl_priv->OvlsCnt);
 
     pOvl_priv->MaxPgSize = FB_MAXPGSIZE;
+    pOvl_priv->ColorKeyDef = DEF_COLOR_KEY;
 
     ioctl(pOvl_priv->OvlFb[UILayer].fd, FBIOGET_VSCREENINFO, &pOvl_priv->cur_var);
 
@@ -1288,20 +1507,13 @@ int Open_RkLayers(Bool MasterMode)
 		return -ENOMEM;
 	}
 
-    if (ump_open() != UMP_OK){
-    	ERRMSG( "HW:Error open UMP");
+    pOvl_priv->fd_DRM = ovlInitDRMHW();
+    if(pOvl_priv->fd_DRM <= 0){
+    	ERRMSG( "HW:Error DRM");
     	MFREE(pOvl_priv);
     	return -ENODEV;
     }
-
-    pOvl_priv->fd_USI = ovlInitUSIHW();
-    if(pOvl_priv->fd_USI <= 0){
-    	ERRMSG( "HW:Error USI");
-    	ump_close();
-    	MFREE(pOvl_priv);
-    	return -ENODEV;
-    }
-    OVLDBG( "fd_USI:%d",pOvl_priv->fd_USI);
+    OVLDBG( "fd_DRM:%d",pOvl_priv->fd_DRM);
 
     OVLDBG( "HW:Initialize overlays");
 
@@ -1322,7 +1534,7 @@ int Open_RkLayers(Bool MasterMode)
     if(pOvl_priv->OvlFb[EMU1Layer_IPP].fd < 0){
     	ERRMSG( "HW:Error IPP");
     }else{
-    	pOvl_priv->OvlsCnt++;
+//    	pOvl_priv->OvlsCnt++;
     	pOvl_priv->OvlsAvl[EMU1Layer_IPP]=TRUE;
         pthread_mutex_init(&pOvl_priv->ippmutex, NULL);
     }
@@ -1349,7 +1561,7 @@ int Open_RkLayers(Bool MasterMode)
     OVLDBG("OvlsCnt:%d", pOvl_priv->OvlsCnt);
     set_ovl_param(MasterMode);
 
-    OVLDBG( "HW:Initialize USI");
+    OVLDBG( "HW:Initialize DRM");
 /*    if(tmp)
     if (!LoadKernelModule("rk_ump")){
     	ERRMSG("can't load usi_ump kernel module");
@@ -1373,20 +1585,20 @@ void Close_RkLayers()
     if(pOvl_priv){
 
     	for(i = 0;i < MAX_OVERLAYs;i++){
-    		if(pOvl_priv->OvlsAvl[i] && pOvl_priv->OvlFb[i].fd > 0){
-    			if(OvlFreeLay(i))
-    				ovlIsUsedCheck(i);// deactivate nonused layers
-    			close(pOvl_priv->OvlFb[i].fd);
+//    		if(pOvl_priv->OvlsAvl[i] && pOvl_priv->OvlFb[i].fd > 0){
+    		if(pOvl_priv->OvlFb[i].fd > 0){
+    		    if(OvlFreeLay(i)){
+    			ovlDisableUnused(i);// deactivate nonused layers
+		    }
+    		    close(pOvl_priv->OvlFb[i].fd);
     		}
     	}
 
     	if(pOvl_priv->CacheMemPg)
     		OvlCacheFreeBlock(UILayer);
 
-    	if(pOvl_priv->fd_USI > 0)
-    		close(pOvl_priv->fd_USI);
-
-    	ump_close();
+    	if(pOvl_priv->fd_DRM > 0)
+    		close(pOvl_priv->fd_DRM);
 
         MFREE(pOvl_priv);
     }

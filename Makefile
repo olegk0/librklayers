@@ -1,7 +1,7 @@
-DEBUG ?=y
+DEBUG ?=n
 
-ENABLE_RGA ?=y
-ENABLE_IPP ?=y
+ENABLE_RGA ?=n
+ENABLE_IPP ?=n
 
 ifeq ($(ENABLE_IPP),y)
 DEFINES += -DIPP_ENABLE
@@ -19,9 +19,9 @@ else
 DEFINES += -O3
 endif
 
-INCLUDES = -I./include
+INCLUDES = -I./include -I/media/filez1/src/OpenELEC.tv-master/build.Stalker-MK903V_fb.arm-1.0-devel/toolchain/armv7a-Stalker-linux-gnueabi/sysroot/usr/include/libdrm
 CFLAGS = -fPIC -Wall -Wextra $(INCLUDES) $(DEFINES)
-LDFLAGS = -shared -lUMP -lpthread
+LDFLAGS = -shared -lpthread -ldrm
 
 INSTALL_DIR = /usr/lib/
 TARGET_LIB = librklayers.so
@@ -32,7 +32,7 @@ DEFINES += -DLIBNAME=$(TARGET_LIB)
 OBJS = $(addsuffix .o,$(basename $(SRCS)))
 DEP = $(addsuffix .d,$(basename $(SRC)))
 
-CC = gcc
+CC = armv7a-Stalker-linux-gnueabi-gcc
 RM = rm -f
 CP = cp -f
 

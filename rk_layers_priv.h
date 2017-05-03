@@ -23,8 +23,8 @@
 #define HW_TIMEOUT 100
 
 #define VERSION_MAJOR  0
-#define VERSION_MINOR  8
-#define VERSION_BUILD  3
+#define VERSION_MINOR  20
+#define VERSION_BUILD  0
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -46,12 +46,21 @@
 #include "rga.h"
 #endif
 #include <linux/fb.h>
-#include <ump/ump.h>
-#include <ump/ump_ref_drv.h>
-#include "rk3066.h"
 #include <stdio.h>
 #include "chroma_neon.h"
 #include "out_cache_defs.h"
+
+enum {
+        HW_NONE=0,
+        HW_UI=1,
+        HW_SCALE= 2,
+        HW_YUV= 4,
+        HW_HWC= 8,
+};
+
+#include "rk3288.h"
+
+#define FB_DEV_TMP FB_DEV "%d"
 
 /*#define RGA_ENABLE 1
 #define IPP_ENABLE 1
@@ -72,7 +81,20 @@
 #define TRUE 1
 #define FALSE 0
 
-#define MAX_OVERLAYs 5
+//#define MAX_OVERLAYs HW_OVERLAYs
+#ifdef IPP_ENABLE
+    #ifdef RGA_ENABLE
+	#define MAX_OVERLAYs HW_OVERLAYs + 2
+    #else
+	#define MAX_OVERLAYs HW_OVERLAYs + 1
+    #endif
+#else
+    #ifdef RGA_ENABLE
+	#define MAX_OVERLAYs HW_OVERLAYs + 1
+    #else
+	#define MAX_OVERLAYs HW_OVERLAYs
+    #endif
+#endif
 
 #ifdef RGA_ENABLE
 typedef enum {
@@ -82,13 +104,9 @@ typedef enum {
 } RGAUpdModeType;
 #endif
 
-enum {
-	UILayer=0,
-	Ovl1Layer=1,
-	Ovl2Layer=2,
-	EMU1Layer_IPP=3,
-	EMU2Layer_RGA=4,
-};
+#define UILayer 0
+#define EMU1Layer_IPP HW_OVERLAYs
+#define EMU2Layer_RGA EMU1Layer_IPP+1
 
 typedef struct
 {
@@ -97,8 +115,8 @@ typedef struct
 } SHMdt;
 
 typedef struct {
-	ump_secure_id	ump_fb_secure_id;
-	ump_handle		ump_handle;
+	uint32_t	mem_id;
+	uint32_t	mem_handle;
 	unsigned char	*fb_mmap;
 	unsigned long	buf_size;
 	unsigned long	phy_addr;
@@ -122,10 +140,11 @@ typedef struct {
 	OvlLayoutType	ReqType;
 	Bool			InUse;
 //	Bool			ResChange;
+	int			lock_fd;
 } ovlLayRec, *ovlLayPtr;
 
 typedef struct {
-	int				fd_USI;
+	int			fd_DRM;
 	ovlLayRec		OvlLay[MAX_OVERLAYs];
 	ovlFbRec		OvlFb[MAX_OVERLAYs];
 	uint32_t		MaxPgSize;
@@ -150,6 +169,7 @@ typedef struct {
 	pthread_mutex_t	ippmutex;
 	struct rk29_ipp_req	IPP_req;
 #endif
+	uint32_t		ColorKeyDef;
 } OvlHWRec, *OvlHWPtr;
 
 #define ToIntMemPg(mpg)	((ovlMemPgPtr)mpg)
@@ -160,7 +180,7 @@ typedef struct {
 #define LayIsUIfb(layout)	(pOvl_priv->OvlFb[layout].Type == UI_L)
 
 #define LayValid(lay) (lay < MAX_OVERLAYs && lay >= 0 && pOvl_priv->OvlsAvl[lay])
-#define LayHWValid(lay) (lay < EMU1Layer_IPP && lay >= 0 && pOvl_priv->OvlsAvl[lay])
+#define LayHWValid(lay) (lay < HW_OVERLAYs && lay >= 0 && pOvl_priv->OvlsAvl[lay])
 #define LayValidAndNotUI(lay) (LayValid(lay) && !LayIsUIfb(lay))
 #define LayHWValidAndNotUI(lay) (LayHWValid(lay) && !LayIsUIfb(lay))
 
@@ -169,12 +189,12 @@ typedef struct {
 extern OvlHWPtr pOvl_priv;
 
 ovlMemPgPtr ovlInitMemPgDef();
-int ovlInitUSIHW();
-int ovlUSIAllocMem( struct usi_ump_mbs *uum);
-int ovlUSIFreeMem( ump_secure_id	secure_id);
-int ovlUSIGetStat( struct usi_ump_mbs_info *uumi);
-int ovlUSIAllocRes(int res);
-int ovlUSIFreeRes(int res);
+int ovlInitDRMHW();
+//int ovlDRMAllocMem( struct usi_ump_mbs *uum);
+int ovlDRMFreeMem( uint32_t	mem_id);
+//int ovlDRMGetStat( struct usi_ump_mbs_info *uumi);
+//int ovlDRMAllocRes(int res);
+//int ovlDRMFreeRes(int res);
 int ovlclearbuf( ovlMemPgPtr PMemPg);
 
 #ifdef IPP_ENABLE
